@@ -1,11 +1,20 @@
 
 ** Installation
 
+*** From local copy
+
 #+begin_src sh
   pip install /path/to/package
 #+end_src
 
-Then you can use this by importing =jsf=.
+*** From GitHub
+
+This won't work until the package has been made public
+
+#+begin_src sh
+pip install git+https://github.com/DGermano8/jazz-shrill-fart.git
+#+end_src
+
 
 ** Testing
 
