@@ -5,8 +5,17 @@
   pip install /path/to/package
 #+end_src
 
+Then you can use this by importing =jsf=.
+
 ** Testing
 
 #+begin_src sh
   python3 -m unittest discover -s tests
+#+end_src
+
+** Housekeeping
+
+#+begin_src sh
+  black jsf
+  mypy jsf
 #+end_src
