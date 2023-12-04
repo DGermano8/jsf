@@ -1,0 +1,12 @@
+
+** Installation
+
+#+begin_src sh
+  pip install /path/to/package
+#+end_src
+
+** Testing
+
+#+begin_src sh
+  python3 -m unittest discover -s tests
+#+end_src
