@@ -3,8 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+
 Welcome to the Jump-Switch-Flow Documentation!
 ==============================================
+
+.. image:: _static/jsf-logo.png
+   :width: 400
+   :align: center
 
 .. contents::
    :local:
@@ -160,8 +165,18 @@ you can install it with pip.
 
    pip install git+https://github.com/DGermano8/jazz-shrill-fart.git
 
+FAQs
+----
+
+If you have a question that is not answered by this documentation,
+please lodge an issue on the GitHub page for this package:
+https://github.com/DGermano8/jazzy-shrill-fart
+
+Housekeeping
+------------
+
 Testing
--------
+^^^^^^^
 
 There are some unit tests in the ``tests`` directory. You can run them
 with the following command.
@@ -170,8 +185,8 @@ with the following command.
 
    python3 -m unittest discover -s tests
 
-Housekeeping
-------------
+Code formating and checking
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This package uses ``black`` and ``mypy`` for code formatting and type
 checking, respectively. You can run them with the following commands.
@@ -180,5 +195,13 @@ checking, respectively. You can run them with the following commands.
 
    black jsf
    mypy jsf
+
+Building the documentation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: sh
+
+   make html
+   cp build/html <my/website>
 
 ..  LocalWords:  JSF
