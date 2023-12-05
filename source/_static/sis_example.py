@@ -7,11 +7,12 @@ import jsf
 random.seed(7)
 
 x0 = [1000 - 2, 2]
-
 rates = lambda x, _: [2e-3 * x[0] * x[1], 1.0 * x[1]]
-
 reactant_matrix = [[1, 1], [0, 1]]
 product_matrix = [[0, 2], [1, 0]]
+
+t_max = 10.0
+
 
 stoich = {
     "nu": [
@@ -22,10 +23,8 @@ stoich = {
     "nuReactant": reactant_matrix,
     "nuProduct": product_matrix,
 }
-
 my_opts = {"EnforceDo": [0, 0], "dt": 0.1, "SwitchingThreshold": [50, 50]}
 
-t_max = 10.0
 
 sim = jsf.JumpSwitchFlowSimulator(x0, rates, stoich, t_max, my_opts)
 
