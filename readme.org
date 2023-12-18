@@ -12,7 +12,7 @@
 This won't work until the package has been made public
 
 #+begin_src sh
-pip install git+https://github.com/DGermano8/jazz-shrill-fart.git
+pip install git+https://github.com/DGermano8/jsf.git
 #+end_src
 
 
@@ -20,6 +20,15 @@ pip install git+https://github.com/DGermano8/jazz-shrill-fart.git
 
 #+begin_src sh
   python3 -m unittest discover -s tests
+#+end_src
+
+** Documentation
+
+The documentation is generated with Sphinx and can be found in the
+=source= directory. To build the documentation use the following:
+
+#+begin_src sh
+  make html
 #+end_src
 
 ** Housekeeping

@@ -143,8 +143,9 @@ Installation
 
 .. _installation:
 
-This package is not yet available on PyPI. You can install it from a
-local copy or from GitHub.
+This package is not yet available on PyPI. You can install it from a :ref:`local copy <local_copy_installation>` or from :ref:`GitHub <github_installation>`.
+
+.. _local_copy_installation:
 
 From Local Copy
 ^^^^^^^^^^^^^^^
@@ -155,6 +156,8 @@ If you have a local copy of the package, you can install it with pip.
 
    pip install /path/to/package
 
+.. _github_installation:
+
 From GitHub
 ^^^^^^^^^^^
 
@@ -163,14 +166,14 @@ you can install it with pip.
 
 .. code-block:: sh
 
-   pip install git+https://github.com/DGermano8/jazz-shrill-fart.git
+   pip install git+https://github.com/DGermano8/jsf.git
 
 FAQs
 ----
 
 If you have a question that is not answered by this documentation,
 please lodge an issue on the GitHub page for this package:
-https://github.com/DGermano8/jazzy-shrill-fart
+https://github.com/DGermano8/jsf
 
 Housekeeping
 ------------
