@@ -105,7 +105,6 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
 
             firstStayWhileLoop = False
             if TimePassed > 0:
-                # Props = rates(Xprev, AbsT)
                 Props = rates(Xcurr, AbsT)
 
             integralStep = ComputeIntegralOfFiringTimes(Dtau, Props, rates, Xprev, Xcurr, AbsT)
@@ -121,27 +120,11 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
                                 integralOfFiringTimes[jj] = 0.0
                                 randTimes[jj] = random.random()
 
-            # Identify which reactions have fired
-            # try:
-            #     firedReactions = [
-            #         (0 > rand - (1 - math.exp(-integral))) * disc
-            #         for rand, integral, disc in zip(randTimes, integralOfFiringTimes, discCompartment)
-            #     ]
-            # except:
-            #     import pdb; pdb.set_trace()
-            try:
-                firedReactions = [
+            firedReactions = [
                         (0 > rand - (1 - math.exp(-integral))) * disc
                         for rand, integral, disc in zip(randTimes, integralOfFiringTimes, discCompartment)
                     ]
-            except:
-                import pdb; pdb.set_trace()
-                integralOfFiringTimes = [ integral if integral > -700 else -700 for integral in integralOfFiringTimes]
-                firedReactions = [
-                        (0 > rand - (1 - math.exp(-integral))) * disc
-                        for rand, integral, disc in zip(randTimes, integralOfFiringTimes, discCompartment)
-                    ]
-
+            
             if NNZ(firedReactions) > 0:
                 # Identify which reactions have fired
                 tauArray = ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,Dtau,nRates,integralStep)
@@ -169,15 +152,12 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
 
         iters = iters + 1
         ContT = ContT + DtauContStep
-        # print('ContT = ', ContT, end='\r')
-        # TauArr[iters] = ContT
+
         TauArr.append(ContT)
         for i in range(len(X)):
-            # X[i][iters] = X[i][iters - 1] + (DtauContStep - TimePassed) * (dXdt[i] * DoCont[i])
             X[i].append(X[i][iters - 1] + (DtauContStep - TimePassed) * (dXdt[i] * DoCont[i]))
 
         if correctInteger == 1:
-            # pos = NewDiscCompartmemt.index(max(NewDiscCompartmemt))
             pos = NewDiscCompartmemt
             X[pos][iters] = round(X[pos][iters])
 
@@ -187,13 +167,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
                     integralOfFiringTimes[jj] = 0.0
                     randTimes[jj] = random.random()
             NewDiscCompartmemt = None
-        # print('DoCont = ', DoCont, ' DoDisc = ', DoDisc, ' correctInteger = ', correctInteger)
-        # print('T = ', X[0][iters], ' I = ', X[1][iters], ' V = ', X[2][iters])
-        # if(X[0][iters] < 0 or X[1][iters] < 0 or X[2][iters]<0):
-        #     import pdb; pdb.set_trace()
 
-    # print('T = ', X[0][-1], ' I = ', X[1][-1], ' V = ', X[2][-1])
-    # print('DoDisc = ', DoDisc)
     return X, TauArr
 
 def ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,dt,nRates,integralStep):
@@ -206,27 +180,6 @@ def ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,dt,n
             tau_val_1 = Integral / (Props[kk])
 
             tau_val = tau_val_1
-
-            # ExpInt = math.exp(-(integralOfFiringTimes[kk] - integralStep[kk]))
-
-            # # if ExpInt == 0:
-            # #     import pdb; pdb.set_trace()
-            # Integral = math.log((1 - randTimes[kk]) / ExpInt)
-            # # if Props[kk] == 0:
-            # #     import pdb; pdb.set_trace()
-            # if Props[kk] == 0:
-            #     tau_val_1 = 10**(-16)
-            # else:
-            #     tau_val_1 = Integral / (-1 * Props[kk])
-
-            # tau_val_2 = -1
-            # tau_val = tau_val_1
-            # if tau_val_1 < 0:
-            #     tau_val_1 = abs(tau_val_1)
-            #     if abs(tau_val_1) < dt ** 2:
-            #         tau_val_2 = abs(tau_val_1)
-            #     tau_val_1 = 0
-            #     tau_val = max(tau_val_1, tau_val_2)
 
             tauArray[kk] = tau_val
 
@@ -254,13 +207,11 @@ def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates
     return Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin
 
 def ComputeIntegralOfFiringTimes(Dtau, Props, rates, Xprev, Xcurr, AbsT):
-    # Props = rates(Xprev, AbsT)
     # Integrate the cumulative wait times using trapezoid method
     integralStep = [Dtau * 0.5 * (Props[i] + rates(Xcurr, AbsT + Dtau)[i]) for i in range(len(Props))]
     return integralStep
 
 def ComputedXdt(Xprev, Props, nu, contCompartment, nCompartments):
-    # dXdt = np.sum(Props * (contCompartment * nu), axis=0).reshape(nCompartments, 1)
     dXdt = [sum(Props[i] * contCompartment[i] * nu[i][j] for i in range(len(Props))) for j in range(len(nu[0]))]
 
     return dXdt
@@ -273,10 +224,7 @@ def ORIGINAL_UpdateCompartmentRegime(dt, Xprev, Dtau, Props, nu, SwitchingThresh
     NewDiscCompartmemt = [0] * nCompartments
 
     # Identify if a state has just become discrete
-    # if NNZ(NewDoDisc) > NNZ(DoDisc):
-    # if any([x != y for x, y in zip(NewDoDisc, DoDisc)]):
-
-    # dXdt = [sum(Props[i] * contCompartment[i] * nu[i][j] for i in range(len(Props))) for j in range(len(nu[0]))]
+    
     if any([((x > (thresh)) and  (x  <= (thresh+1)) and  isCont) for x, isCont, thresh in zip(Xprev,DoCont,SwitchingThreshold)]):
     # if any([((x > (thresh)) and  (x+Dtau*dxi*isCont  <= (thresh)) and  isCont) for x, isCont, thresh, dxi in zip(Xprev,DoCont,SwitchingThreshold,dXdt)]):
         # Identify which compartment has just switched
@@ -290,22 +238,14 @@ def ORIGINAL_UpdateCompartmentRegime(dt, Xprev, Dtau, Props, nu, SwitchingThresh
             # Here, we identify the time to the next integer
             dXdt = [sum(Props[i] * contCompartment[i] * nu[i][j] for i in range(len(Props))) for j in range(len(nu[0]))]
 
-            # dXdt_min = min(dXdt)
             Xprev_pos = Xprev[pos]
             rounded_Xprev_pos = math.floor(Xprev_pos)
             dXdt_pos = dXdt[pos]
 
-            # print('DoCont = ', DoCont)
-            # print('Xprv = ', Xprev)
-            # print('tent time = ', abs((rounded_Xprev_pos - Xprev_pos) / dXdt_pos), ' pos = ', pos)
-            # print('dXdt = ', dXdt)
             Dtau = min(dt, abs((rounded_Xprev_pos - Xprev_pos) / dXdt_pos))
 
             # If the time to the next integer is less than the time step, we need to move the mesh
             if Dtau < dt:
-                # Dtau = Dtau
-                # print('DoDist = ', DoDisc)
-                # print('Dtau = ', Dtau, ' pos = ', pos,  ' Xprev_pos = ', Xprev_pos)
                 NewDiscCompartmemt[pos] = 1
                 correctInteger = 1
         else:
@@ -367,51 +307,6 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
         DoDisc = NewDoDisc
 
     return Dtau, correctInteger, DoDisc, DoCont, discCompartment, contCompartment, NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt
-
-
-# def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates):
-#     # check if any states change in this step
-#     NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
-
-#     correctInteger = 0
-#     NewDiscCompartmemt = None
-#     x_step = [Dtau*dxi*isCont for dxi, isCont in zip(dXdt, DoCont)]
-#     if any([( (x+dxi  <= (thresh)) and  isCont==1) for x, isCont, thresh, dxi in zip(Xprev,DoCont,SwitchingThreshold,x_step)]):
-#         # Identify which compartment has just switched
-#         pos = None
-#         for i, (x, isCont, thresh, dxi) in enumerate(zip(Xprev,DoCont,SwitchingThreshold, x_step)):
-#             # if (x > (thresh) and  isCont==1 and  (x+dxi  <= (thresh)) ):
-#             if (isCont==1 and  (x+dxi  <= (thresh)) ):
-#                 pos = i
-#                 break
-
-#         if pos is not None:
-#             Xprev_pos = Xprev[pos]
-#             # rounded_Xprev_pos = round(Xprev_pos+x_step[pos])
-#             rounded_Xprev_pos = math.ceil(Xprev_pos+x_step[pos])
-#             # rounded_Xprev_pos = math.floor(Xprev_pos+x_step[pos])
-#             dXdt_pos = dXdt[pos]
-#             Dtau = min(dt, abs((rounded_Xprev_pos - Xprev_pos) / dXdt_pos))
-
-#             # If the time to the next integer is less than the time step, we need to move the mesh
-#             if Dtau < dt:
-#                 # update the discrete compartment that has just switched
-#                 NewDiscCompartmemt = pos
-#                 correctInteger = 1
-#         else:
-#             contCompartment = NewcontCompartment
-#             discCompartment = NewdiscCompartment
-#             DoCont = NewDoCont
-#             DoDisc = NewDoDisc
-#             # correctInteer = 1
-#     else:
-#         contCompartment = NewcontCompartment
-#         discCompartment = NewdiscCompartment
-#         DoCont = NewDoCont
-#         DoDisc = NewDoDisc
-
-#     return Dtau, correctInteger, DoDisc, DoCont, discCompartment, contCompartment, NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt
-
 
 def IsDiscrete(X, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments, nRates):
     # Check if any compartments should be switched to continuous
