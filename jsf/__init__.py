@@ -1,7 +1,26 @@
 import random
 import math
 
-def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
+def jsf(x0, rates, stoich, t_max, **kwargs):
+    """
+    x0 :: State                 # state at time zero.
+    rates :: State -> Time -> [Rate] # rate function.
+    stoich :: Structure
+    times :: Number             # think "final time"
+    options :: Structure
+    """
+    if kwargs['method'] is None or kwargs['method'] == 'exact':
+        # throw an error because the method is not implemented
+        raise RuntimeError("Exact method not implemented")
+    elif kwargs['method'] == 'operator-splitting':
+        result = JumpSwitchFlowSimulator(x0, rates, stoich, t_max, kwargs['config'])
+    else:
+        raise RuntimeError(f"Requested method is bonkers {kwargs['method']}")
+
+    return result
+
+
+def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     """
     x0 :: State                 # state at time zero.
     rates :: State -> Time -> [Rate] # rate function.
@@ -12,11 +31,9 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
     # predefine and initialise the system
     # TODO - add default options
 
-    X0 = x0
     nu = stoich["nu"]
     nuReactant = stoich["nuReactant"]
 
-    tFinal = times
     dt = options["dt"]
     EnforceDo = options["EnforceDo"]
     SwitchingThreshold = options["SwitchingThreshold"]
@@ -50,10 +67,10 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
 
     tauArray = [0]*nRates
 
-    overFlowAllocation = round(1000 * (tFinal+dt)/dt + 1)
+    overFlowAllocation = round(1000 * (t_max+dt)/dt + 1)
 
     # initialise solution arrays
-    X = [[X0[i]] for i in range(nCompartments)]
+    X = [[x0[i]] for i in range(nCompartments)]
     TauArr = [0.0]
     iters = 0
 
@@ -61,15 +78,15 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
     AbsT = 0
     ContT = 0
 
-    Xprev = X0
-    Xcurr = X0
+    Xprev = x0
+    Xcurr = x0
 
     # NewDiscCompartmemt = [0.0] * nCompartments
     NewDiscCompartmemt = None
     correctInteger = 0
 
     # import pdb; pdb.set_trace()
-    while ContT < tFinal:
+    while ContT < t_max:
 
         Dtau = dt
         Xprev = [X[i][iters] for i in range(len(X))]
