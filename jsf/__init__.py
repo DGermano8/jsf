@@ -1,5 +1,10 @@
 import random
 import math
+# Import the fibonnaci function as defined in ./cython/hello.pyx. The
+# actual definition of the function is in ./src/hello.c and the header
+# is ./src/hello.h.
+from jsf.hello import py_fibonacci as fib
+
 
 def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
     """
