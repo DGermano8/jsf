@@ -4,7 +4,7 @@
 *** From local copy
 
 #+begin_src sh
-  pip install /path/to/package
+  pip install /path/to/jsf
 #+end_src
 
 *** From GitHub
@@ -15,6 +15,17 @@ This won't work until the package has been made public
 pip install git+https://github.com/DGermano8/jsf.git
 #+end_src
 
+*** Compiling C implementation
+
+To make use of the C functionality, you may need to compile from
+source. If this is the case, the following commands will compile it
+and install it from a local copy.
+
+#+begin_src sh
+  cd /path/to/jsf
+  python setup.py build_ext --inplace
+  pip install .
+#+end_src
 
 ** Testing
 
