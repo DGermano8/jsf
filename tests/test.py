@@ -49,7 +49,7 @@ class TestBirthDeathExample(unittest.TestCase):
         }
 
         self.sims = [
-            jsf.JumpSwitchFlowSimulator(x0, rates, stoich, self.t_max, my_opts)
+            jsf.jsf(x0, rates, stoich, self.t_max, my_opts, method="operator-splitting")
             for x0 in self.x0s
         ]
         self.x_timeseriess = [sim[0][0] for sim in self.sims]
