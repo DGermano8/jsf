@@ -174,11 +174,12 @@ actually run the simulation.
    }
    my_opts = {"EnforceDo": [0, 0], "dt": 0.1, "SwitchingThreshold": [50, 50]}
 
-Then we can call `jsf.JumpSwitchFlowSimulator` to simulate the process
+Then we can call `jsf.jsf` to simulate the process using the operator
+splitting method.
 
 .. code-block:: python
 
-   sim = jsf.JumpSwitchFlowSimulator(x0, rates, stoich, t_max, my_opts)
+   sim = jsf.jsf(x0, rates, stoich, t_max, config=my_opts, method="operator-splitting")
 
 Visualising the simulation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

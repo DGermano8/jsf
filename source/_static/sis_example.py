@@ -26,7 +26,7 @@ stoich = {
 my_opts = {"EnforceDo": [0, 0], "dt": 0.1, "SwitchingThreshold": [50, 50]}
 
 
-sim = jsf.JumpSwitchFlowSimulator(x0, rates, stoich, t_max, my_opts)
+sim = jsf.jsf(x0, rates, stoich, t_max, config=my_opts, method="operator-splitting")
 
 sim_df = pd.DataFrame(
     {"time": sim[1], "susceptible": sim[0][0], "infectious": sim[0][1]}
