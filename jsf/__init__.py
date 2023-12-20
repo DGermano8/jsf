@@ -1,6 +1,25 @@
 import random
 import math
 
+def jsf(x0, rates, stoich, t_max, **kwargs):
+    """
+    x0 :: State                 # state at time zero.
+    rates :: State -> Time -> [Rate] # rate function.
+    stoich :: Structure
+    times :: Number             # think "final time"
+    options :: Structure
+    """
+    if kwargs['method'] is None or kwargs['method'] == 'exact':
+        # throw an error because the method is not implemented
+        raise RuntimeError("Exact method not implemented")
+    elif kwargs['method'] == 'operator-splitting':
+        result = JumpSwitchFlowSimulator(x0, rates, stoich, t_max, kwargs['config'])
+    else:
+        raise RuntimeError(f"Requested method is bonkers {kwargs['method']}")
+
+    return result
+
+
 def JumpSwitchFlowSimulator(x0, rates, stoich, times, options):
     """
     x0 :: State                 # state at time zero.
