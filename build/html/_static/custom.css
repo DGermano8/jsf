@@ -1,0 +1,21 @@
+/* This file intentionally left blank. */
+body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.428571429;
+    color: #333333;
+    background-color: rgba(131, 96, 150, 0.5);
+}
+div.body{
+    background-color:  rgb(227, 227, 227);
+}
+
+div.body h1{
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+div.body h2{
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+div.body h3{
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
