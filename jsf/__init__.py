@@ -31,7 +31,14 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     # predefine and initialise the system
     # TODO - add default options
 
+    # NOTE In the nu-matrix each row is a reaction and each column
+    # describes the number items of that species used in the reaction.
+    # There is one rate for each reaction and since there is a column
+    # for each species we can use the length of the first column to
+    # find the number of species in the system.
     nu = stoich["nu"]
+    nRates = len(nu)
+    nCompartments = len(nu[0])
     nuReactant = stoich["nuReactant"]
 
     dt = options["dt"]
@@ -46,8 +53,6 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
 
     DoDisc = [(x <= threshold and x==round(x)) for x, threshold in zip(x0, SwitchingThreshold)]
 
-    nRates = len(nu)
-    nCompartments = len(nu[0])
 
     # identify which compartment is in which reaction:
     NuComp = [[value != 0 for value in row] for row in nu]
@@ -57,7 +62,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     discCompartment = [0]*nRates
     for idx in range(nCompartments):
         for compartIdx in range(nRates):
-            if  not EnforceDo[idx]:
+            if not EnforceDo[idx]:
                 if DoDisc[idx] and compartInNu[compartIdx][idx]:
                     discCompartment[compartIdx] = 1
             else:

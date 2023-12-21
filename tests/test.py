@@ -32,6 +32,9 @@ class TestBirthDeathExample(unittest.TestCase):
         nu_reactants = [[1], [1]]
         nu_products = [[2], [0]]
 
+        # In the nu-matrix each row is a reaction and each column
+        # describes the number items of that species used in the
+        # reaction.
         stoich = {
             "nu": [
                 [a - b for a, b in zip(r1, r2)]
@@ -82,6 +85,9 @@ class FartTestSISExample(unittest.TestCase):
             i = x[1]
             return [2e-3 * s * i, 1.0 * i]
 
+        # In the nu-matrix each row is a reaction and each column
+        # describes the number items of that species used in the
+        # reaction.
         nu_reactants = [[1, 1], [0, 1]]
         nu_products = [[0, 2], [1, 0]]
         stoich = {
