@@ -38,9 +38,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     EnforceDo = options["EnforceDo"]
     SwitchingThreshold = options["SwitchingThreshold"]
 
-    DoDisc = stoich["DoDisc"]
-    DoDisc = [(1 if x <= threshold and x==round(x) else 0) for x, threshold in zip(X0, SwitchingThreshold)]
-    DoCont = ArraySubtractAB([1]*len(DoDisc), DoDisc)
+    DoDisc = [(x <= threshold and x==round(x)) for x, threshold in zip(x0, SwitchingThreshold)]
 
     nRates = len(nu)
     nCompartments = len(nu[0])
@@ -96,22 +94,21 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
         dXdt = ComputedXdt(Xprev, Props, nu, contCompartment, nCompartments)
 
         # check if any states change in this step
-        Dtau, correctInteger, DoDisc, DoCont, discCompartment, contCompartment, NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt = UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
+        Dtau, correctInteger, DoDisc, discCompartment, contCompartment, NewDoDisc, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt = UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
 
-        Xcurr = [X[i][iters] + Dtau * (dXdt[i] * DoCont[i]) for i in range(len(X))]
+        # Only apply the forward Euler step if the compartment is continuous.
+        Xcurr = [X[i][iters] + (0 if DoDisc[i] else Dtau * dXdt[i]) for i in range(nCompartments)]
 
         # Update the discrete compartments, if a state has just become discrete
-        OriginalDoCont = DoCont[:]
+        OriginalDoDisc = DoDisc[:]
         if correctInteger == 1:
-            NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
+            NewDoDisc, NewdiscCompartment, NewcontCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
             contCompartment = NewcontCompartment[:]
             discCompartment = NewdiscCompartment[:]
-            DoCont = NewDoCont[:]
             DoDisc = NewDoDisc[:]
 
-
         # Perform the Stochastic Loop
-        stayWhile = True if NNZ(DoCont) != nCompartments else False
+        stayWhile = any(DoDisc)
 
         AbsT = ContT
         DtauContStep = Dtau
@@ -141,7 +138,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
                         (0 > rand - (1 - math.exp(-integral))) * disc
                         for rand, integral, disc in zip(randTimes, integralOfFiringTimes, discCompartment)
                     ]
-            
+
             if NNZ(firedReactions) > 0:
                 # Identify which reactions have fired
                 tauArray = ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,Dtau,nRates,integralStep)
@@ -149,10 +146,10 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
                 if NNZ(tauArray) > 0:
 
                     # Update the discrete compartments
-                    Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoCont, discCompartment)
+                    Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc, discCompartment)
 
                     iters = iters + 1
-                    for i in range(len(X)):
+                    for i in range(nCompartments):
                         X[i].append(Xcurr[i])
 
                     TauArr.append(AbsT)
@@ -172,7 +169,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
 
         TauArr.append(ContT)
         for i in range(len(X)):
-            X[i].append(X[i][iters - 1] + (DtauContStep - TimePassed) * (dXdt[i] * DoCont[i]))
+            X[i].append(X[i][iters - 1] + (0 if DoDisc[i] else (DtauContStep - TimePassed) * dXdt[i]))
 
         if correctInteger == 1:
             pos = NewDiscCompartmemt
@@ -202,7 +199,7 @@ def ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,dt,n
 
     return tauArray
 
-def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoCont,discCompartment):
+def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc,discCompartment):
     tauArray = [float('inf') if tau == 0.0 else tau for tau in tauArray]
 
     DtauMin = min(tauArray)
@@ -211,8 +208,9 @@ def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates
     TimePassed = TimePassed + DtauMin
     AbsT = AbsT + DtauMin
 
-    Xcurr = [X[i][iters] + nu[pos][i] + DtauMin * (dXdt[i] * OriginalDoCont[i]) for i in range(len(X))]
-    Xprev = [X[i][iters] for i in range(len(X))]
+    nCompartments = len(X)
+    Xcurr = [X[i][iters] + nu[pos][i] + (0 if OriginalDoDisc[i] else DtauMin * dXdt[i]) for i in range(nCompartments)]
+    Xprev = [X[i][iters] for i in range(nCompartments)]
 
     integralOfFiringTimes = [integral - step*disc for integral, step, disc in zip(integralOfFiringTimes, integralStep, discCompartment)]
     integralStep = ComputeIntegralOfFiringTimes(DtauMin, Props, rates, Xprev, Xcurr, AbsT)
@@ -279,22 +277,19 @@ def ORIGINAL_UpdateCompartmentRegime(dt, Xprev, Dtau, Props, nu, SwitchingThresh
 
     return Dtau, correctInteger, DoDisc, DoCont, discCompartment, contCompartment, NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt
 
-def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates):
+def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates):
     # check if any states change in this step
-    NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
+    NewDoDisc, NewdiscCompartment, NewcontCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
 
     correctInteger = 0
     NewDiscCompartmemt = None
-    x_step = [Dtau*dxi*isCont for dxi, isCont in zip(dXdt, DoCont)]
-    if any([( (x+dxi  <= (thresh)) and  isCont==1) for x, isCont, thresh, dxi in zip(Xprev,DoCont,SwitchingThreshold,x_step)]):
+    x_step = [( 0 if isDisc else Dtau*dxi ) for dxi, isDisc in zip(dXdt, DoDisc)]
+    if any([( (x+dxi  <= thresh) and  (not isDisc)) for x, isDisc, thresh, dxi in zip(Xprev,DoDisc,SwitchingThreshold,x_step)]):
         # Identify which compartment has just switched
         pos = 0
         possible_Dtau = [dt]
-        for i, (x, isCont, thresh, dxi) in enumerate(zip(Xprev,DoCont,SwitchingThreshold, x_step)):
-            # if (x > (thresh) and  isCont==1 and  (x+dxi  <= (thresh)) ):
-            if (isCont==1 and  (x+dxi  <= (thresh)) ):
-                # print('pos = ', i)
-                # print('x = ', x)
+        for i, (x, isDisc, thresh, dxi) in enumerate(zip(Xprev,DoDisc,SwitchingThreshold, x_step)):
+            if ((not isDisc) and  (x+dxi  <= thresh)):
 
                 Xprev_pos = Xprev[i]
                 rounded_Xprev_pos = math.ceil(Xprev_pos+x_step[i])
@@ -314,30 +309,26 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
         else:
             contCompartment = NewcontCompartment
             discCompartment = NewdiscCompartment
-            DoCont = NewDoCont
             DoDisc = NewDoDisc
             # correctInteer = 1
     else:
         contCompartment = NewcontCompartment
         discCompartment = NewdiscCompartment
-        DoCont = NewDoCont
         DoDisc = NewDoDisc
 
-    return Dtau, correctInteger, DoDisc, DoCont, discCompartment, contCompartment, NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt
+    return Dtau, correctInteger, DoDisc, discCompartment, contCompartment, NewDoDisc, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt
 
-def IsDiscrete(X, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments, nRates):
+def IsDiscrete(X, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments, nRates):
     # Check if any compartments should be switched to continuous
-    DoDiscTmp = [(1 if x <= threshold else 0) for x, threshold in zip(X, SwitchingThreshold)]
-    DoContTmp = [1 - x for x in DoDiscTmp]
+    DoDiscTmp = [x <= threshold for x, threshold in zip(X, SwitchingThreshold)]
 
     for idx, x in enumerate(EnforceDo):
         if x == 1:
             DoDiscTmp[idx] = DoDisc[idx]
-            DoContTmp[idx] = DoCont[idx]
 
     are_equal = [DoDiscTmp[idx] == DoDisc[idx] for idx in range(nCompartments)]
 
-    if sum(are_equal) == nCompartments:
+    if all(are_equal):
         discCompartmentTmp = discCompartment.copy()
         contCompartmentTmp = contCompartment.copy()
     else:
@@ -346,16 +337,16 @@ def IsDiscrete(X, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment
         for idx in range(nCompartments):
             for compartIdx in range(nRates):
                 if EnforceDo[idx] == 0:
-                    if DoDiscTmp[idx] == 1 and compartInNu[compartIdx][idx] == 1:
+                    if DoDiscTmp[idx] and compartInNu[compartIdx][idx] == 1:
                         discCompartmentTmp[compartIdx] = 1
                 else:
-                    if DoDisc[idx] == 1 and compartInNu[compartIdx][idx] == 1:
+                    if DoDisc[idx] and compartInNu[compartIdx][idx] == 1:
                         discCompartmentTmp[compartIdx] = 1
 
     contCompartmentTmp = [1 - x for x in discCompartmentTmp]
 
 
-    return DoDiscTmp, DoContTmp, discCompartmentTmp, contCompartmentTmp
+    return DoDiscTmp, discCompartmentTmp, contCompartmentTmp
 
 # these are helper functions to make it readable
 def ArraySubtractAB(ArrayA, ArrayB):
