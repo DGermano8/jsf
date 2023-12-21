@@ -159,12 +159,12 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
                     if NewDiscCompartmemt==ii and not EnforceDo[ii]:
                         for jj in range(nRates):
                             if compartInNu[jj][ii]:
-                                discCompartment[jj] = 1
+                                discCompartment[jj] = True
                                 integralOfFiringTimes[jj] = 0.0
                                 randTimes[jj] = random.random()
 
             firedReactions = [
-                        (0 > rand - (1 - math.exp(-integral))) * disc
+                        ((0 > (rand - (1 - math.exp(-integral)))) and disc)
                         for rand, integral, disc in zip(randTimes, integralOfFiringTimes, discCompartment)
                     ]
 
@@ -206,7 +206,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
 
             for jj in range(nRates):
                 if compartInNu[jj][pos]:
-                    discCompartment[jj] = 1
+                    discCompartment[jj] = True
                     integralOfFiringTimes[jj] = 0.0
                     randTimes[jj] = random.random()
             NewDiscCompartmemt = None
@@ -312,16 +312,16 @@ def IsDiscrete(X, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, compar
     if all(are_equal):
         discCompartmentTmp = discCompartment.copy()
     else:
-        discCompartmentTmp = [0] * nRates
+        discCompartmentTmp = [False] * nRates
 
         for idx in range(nCompartments):
             for compartIdx in range(nRates):
                 if not EnforceDo[idx]:
                     if DoDiscTmp[idx] and compartInNu[compartIdx][idx] == 1:
-                        discCompartmentTmp[compartIdx] = 1
+                        discCompartmentTmp[compartIdx] = True
                 else:
                     if DoDisc[idx] and compartInNu[compartIdx][idx] == 1:
-                        discCompartmentTmp[compartIdx] = 1
+                        discCompartmentTmp[compartIdx] = True
 
 
     return DoDiscTmp, discCompartmentTmp
