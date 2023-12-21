@@ -35,7 +35,13 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     nuReactant = stoich["nuReactant"]
 
     dt = options["dt"]
-    EnforceDo = options["EnforceDo"]
+
+    # This is to enable us to use a Boolean list here while still
+    # accepting 0/1 as input. In future versions it would be nice to
+    # require a Boolean list but that would break backwards
+    # compatibility so we will leave it for now.
+    EnforceDo = [(not (ed == 0)) for ed in options["EnforceDo"]]
+
     SwitchingThreshold = options["SwitchingThreshold"]
 
     DoDisc = [(x <= threshold and x==round(x)) for x, threshold in zip(x0, SwitchingThreshold)]
@@ -51,11 +57,11 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     discCompartment = [0]*nRates
     for idx in range(nCompartments):
         for compartIdx in range(nRates):
-            if  EnforceDo[idx]==0:
-                if DoDisc[idx]==1 and compartInNu[compartIdx][idx]:
+            if  not EnforceDo[idx]:
+                if DoDisc[idx] and compartInNu[compartIdx][idx]:
                     discCompartment[compartIdx] = 1
             else:
-                if DoDisc[idx]==1 and compartInNu[compartIdx][idx]:
+                if DoDisc[idx] and compartInNu[compartIdx][idx]:
                     discCompartment[compartIdx] = 1
     contCompartment = ArraySubtractAB([1]*nRates,discCompartment)
     # initialise discrete sum compartments
@@ -336,7 +342,7 @@ def IsDiscrete(X, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, contCo
 
         for idx in range(nCompartments):
             for compartIdx in range(nRates):
-                if EnforceDo[idx] == 0:
+                if not EnforceDo[idx]:
                     if DoDiscTmp[idx] and compartInNu[compartIdx][idx] == 1:
                         discCompartmentTmp[compartIdx] = 1
                 else:
