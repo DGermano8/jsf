@@ -109,8 +109,12 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     Xprev = x0
     Xcurr = x0
 
-    # NewDiscCompartmemt = [0.0] * nCompartments
-    NewDiscCompartmemt = None
+    # The `newlyDiscCompIndex` variable is used to track which
+    # compartment has recently switched to being discrete. It was
+    # previously called NewDiscCompartmemt, not to be confused with
+    # NewdiscCompartment or discCompartment which is a list of
+    # booleans describing which reactions are frozen.
+    newlyDiscCompIndex = None
     correctInteger = 0
 
     # import pdb; pdb.set_trace()
@@ -124,7 +128,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
         dXdt = ComputedXdt(Xprev, Props, nu, discCompartment, nCompartments)
 
         # check if any states change in this step
-        Dtau, correctInteger, DoDisc, discCompartment, NewDoDisc, NewdiscCompartment, NewDiscCompartmemt = UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, compartInNu, nCompartments,nRates)
+        Dtau, correctInteger, DoDisc, discCompartment, NewDoDisc, NewdiscCompartment, newlyDiscCompIndex = UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, compartInNu, nCompartments,nRates)
 
         # Only apply the forward Euler step if the compartment is continuous.
         Xcurr = [X[i][iters] + (0 if DoDisc[i] else Dtau * dXdt[i]) for i in range(nCompartments)]
@@ -156,7 +160,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
             # If any of the components have just become discrete, we need to update the integralOfFiringTimes and randTimes
             if correctInteger == 1:
                 for ii in range(nCompartments):
-                    if NewDiscCompartmemt==ii and not EnforceDo[ii]:
+                    if newlyDiscCompIndex==ii and not EnforceDo[ii]:
                         for jj in range(nRates):
                             if compartInNu[jj][ii]:
                                 discCompartment[jj] = True
@@ -201,7 +205,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
             X[i].append(X[i][iters - 1] + (0 if DoDisc[i] else (DtauContStep - TimePassed) * dXdt[i]))
 
         if correctInteger == 1:
-            pos = NewDiscCompartmemt
+            pos = newlyDiscCompIndex
             X[pos][iters] = round(X[pos][iters])
 
             for jj in range(nRates):
@@ -209,7 +213,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
                     discCompartment[jj] = True
                     integralOfFiringTimes[jj] = 0.0
                     randTimes[jj] = random.random()
-            NewDiscCompartmemt = None
+            newlyDiscCompIndex = None
 
     return X, TauArr
 
@@ -265,7 +269,7 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
     NewDoDisc, NewdiscCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, compartInNu, nCompartments,nRates)
 
     correctInteger = 0
-    NewDiscCompartmemt = None
+    newlyDiscCompIndex = None
     x_step = [( 0 if isDisc else Dtau*dxi ) for dxi, isDisc in zip(dXdt, DoDisc)]
     if any([( (x+dxi  <= thresh) and  (not isDisc)) for x, isDisc, thresh, dxi in zip(Xprev,DoDisc,SwitchingThreshold,x_step)]):
         # Identify which compartment has just switched
@@ -287,7 +291,7 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
             if pos > 0:
                     pos = pos - 1
                     # update the discrete compartment that has just switched
-                    NewDiscCompartmemt = pos
+                    newlyDiscCompIndex = pos
                     correctInteger = 1
         else:
             discCompartment = NewdiscCompartment
@@ -297,7 +301,7 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
         discCompartment = NewdiscCompartment
         DoDisc = NewDoDisc
 
-    return Dtau, correctInteger, DoDisc, discCompartment, NewDoDisc, NewdiscCompartment, NewDiscCompartmemt
+    return Dtau, correctInteger, DoDisc, discCompartment, NewDoDisc, NewdiscCompartment, newlyDiscCompIndex
 
 def IsDiscrete(X, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, compartInNu, nCompartments, nRates):
     # Check if any compartments should be switched to continuous
