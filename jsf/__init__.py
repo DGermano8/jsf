@@ -237,51 +237,6 @@ def ComputedXdt(Xprev, Props, nu, contCompartment, nCompartments):
 
     return dXdt
 
-def ORIGINAL_UpdateCompartmentRegime(dt, Xprev, Dtau, Props, nu, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates):
-    # check if any states change in this step
-    NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
-
-    correctInteger = 0
-    NewDiscCompartmemt = [0] * nCompartments
-
-    # Identify if a state has just become discrete
-    
-    if any([((x > (thresh)) and  (x  <= (thresh+1)) and  isCont) for x, isCont, thresh in zip(Xprev,DoCont,SwitchingThreshold)]):
-    # if any([((x > (thresh)) and  (x+Dtau*dxi*isCont  <= (thresh)) and  isCont) for x, isCont, thresh, dxi in zip(Xprev,DoCont,SwitchingThreshold,dXdt)]):
-        # Identify which compartment has just switched
-        pos = None
-        for i, (x, isCont, thresh) in enumerate(zip(Xprev,DoCont,SwitchingThreshold)):
-            if (x <= (thresh+1) and  isCont):
-                pos = i
-                break
-
-        if pos is not None:
-            # Here, we identify the time to the next integer
-            dXdt = [sum(Props[i] * contCompartment[i] * nu[i][j] for i in range(len(Props))) for j in range(len(nu[0]))]
-
-            Xprev_pos = Xprev[pos]
-            rounded_Xprev_pos = math.floor(Xprev_pos)
-            dXdt_pos = dXdt[pos]
-
-            Dtau = min(dt, abs((rounded_Xprev_pos - Xprev_pos) / dXdt_pos))
-
-            # If the time to the next integer is less than the time step, we need to move the mesh
-            if Dtau < dt:
-                NewDiscCompartmemt[pos] = 1
-                correctInteger = 1
-        else:
-            contCompartment = NewcontCompartment
-            discCompartment = NewdiscCompartment
-            DoCont = NewDoCont
-            DoDisc = NewDoDisc
-            # correctInteer = 1
-    else:
-        contCompartment = NewcontCompartment
-        discCompartment = NewdiscCompartment
-        DoCont = NewDoCont
-        DoDisc = NewDoDisc
-
-    return Dtau, correctInteger, DoDisc, DoCont, discCompartment, contCompartment, NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt
 
 def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates):
     # check if any states change in this step
