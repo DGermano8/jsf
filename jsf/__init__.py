@@ -2,12 +2,22 @@ import random
 import math
 
 def jsf(x0, rates, stoich, t_max, **kwargs):
-    """
-    x0 :: State                 # state at time zero.
-    rates :: State -> Time -> [Rate] # rate function.
-    stoich :: Structure
-    times :: Number             # think "final time"
-    options :: Structure
+    """Generates a sample from the JSF process.
+
+    Args:
+        x0: The initial state of the system.
+        rates: A function that takes the current state and time and
+            returns the rates of each reaction.
+        stoich: A dictionary containing the stoichiometry of the
+            system.
+        t_max: The final time of the simulation.
+        **kwargs: A dictionary containing the simulation options.
+
+    Returns:
+        A list containing the time series of the state of the system.
+
+    Raises:
+        RuntimeError: If the requested method is not implemented.
     """
     if kwargs['method'] is None or kwargs['method'] == 'exact':
         # throw an error because the method is not implemented
@@ -22,11 +32,20 @@ def jsf(x0, rates, stoich, t_max, **kwargs):
 
 def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     """
-    x0 :: State                 # state at time zero.
-    rates :: State -> Time -> [Rate] # rate function.
-    stoich :: Structure
-    times :: Number             # think "final time"
-    options :: Structure
+    Simulate a jump-switch-flow process using the operator splitting
+    method.
+
+    Args:
+        x0: The initial state of the system.
+        rates: A function that takes the current state and time and
+            returns the rates of each reaction.
+        stoich: A dictionary containing the stoichiometry of the
+            system.
+        t_max: The final time of the simulation.
+        options: A dictionary containing the simulation options.
+
+    Returns:
+        A list containing the time series of the state of the system.
     """
     # predefine and initialise the system
     # TODO - add default options
