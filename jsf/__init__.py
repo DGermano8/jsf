@@ -199,14 +199,9 @@ def ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,dt,n
     tauArray = [0.0] * nRates
     for kk in range(nRates):
         if firedReactions[kk]:
-
-            Integral_t0_ti = (-1.0*(integralOfFiringTimes[kk] - integralStep[kk]))
+            Integral_t0_ti = integralStep[kk] - integralOfFiringTimes[kk]
             Integral = Integral_t0_ti - math.log((1 - randTimes[kk]))
-            tau_val_1 = Integral / (Props[kk])
-
-            tau_val = tau_val_1
-
-            tauArray[kk] = tau_val
+            tauArray[kk] = Integral / Props[kk]
 
     return tauArray
 
