@@ -39,7 +39,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     SwitchingThreshold = options["SwitchingThreshold"]
 
     DoDisc = stoich["DoDisc"]
-    DoDisc = [(1 if x <= threshold and x==round(x) else 0) for x, threshold in zip(X0, SwitchingThreshold)]
+    DoDisc = [(1 if x <= threshold and x==round(x) else 0) for x, threshold in zip(x0, SwitchingThreshold)]
     DoCont = ArraySubtractAB([1]*len(DoDisc), DoDisc)
 
     nRates = len(nu)
