@@ -237,10 +237,14 @@ def ComputeIntegralOfFiringTimes(Dtau, Props, rates, Xprev, Xcurr, AbsT):
     integralStep = [Dtau * 0.5 * (Props[i] + rates(Xcurr, AbsT + Dtau)[i]) for i in range(len(Props))]
     return integralStep
 
-def ComputedXdt(Xprev, Props, nu, contCompartment, nCompartments):
-    dXdt = [sum(Props[i] * contCompartment[i] * nu[i][j] for i in range(len(Props))) for j in range(len(nu[0]))]
 
-    return dXdt
+def ComputedXdt(Xprev, Props, nu, contCompartment, nCompartments):
+    """
+    Compute the derivative of the state vector at time t for the
+    continuous compartments by summing the contributions from each
+    reaction.
+    """
+    return [sum(Props[i] * contCompartment[i] * nu[i][j] for i in range(len(Props))) for j in range(nCompartments)]
 
 
 def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates):
