@@ -74,10 +74,14 @@ class TestBirthDeathExample(unittest.TestCase):
         self.assertTrue(abs(mean_final_x - thry_mean_final_x) < 2 * std_err_final_x)
 
 
-class FartTestSISExample(unittest.TestCase):
-    # Set up the simulation
+class TestSISExample(unittest.TestCase):
 
     def setUp(self):
+        # Because this is a stochastic process we need to set the
+        # random seed so that we get reproducible results. It is not
+        # sufficient to set the seed at the start of the test module
+        # because we want to be able to run the tests in any order.
+        random.seed(1234)
         x0 = [1000 - 3, 3]
 
         def rates(x, time):
