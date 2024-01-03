@@ -11,6 +11,39 @@ class TestPlaceholderFunction(unittest.TestCase):
         self.assertEqual(1, 1)
 
 
+class AnEdgeCase(unittest.TestCase):
+    def setUp(self):
+
+        self.x0 = [5, 12.1]
+        self.threshold = 12
+        self.t_max = 5.0
+        self.dt = 0.1
+        self.rates = lambda x, t: [1.0 if min(x) >= 1.0 else 0.0]
+        self.nu_reactants = [[1, 1]]
+        self.nu_products = [[0, 0]]
+
+        self.stoich = {
+            "nu": [
+                [a - b for a, b in zip(r1, r2)]
+                for r1, r2 in zip(self.nu_products, self.nu_reactants)
+            ],
+            "DoDisc": [1, 1],
+            "nuReactant": self.nu_reactants,
+            "nuProduct": self.nu_products,
+        }
+        self.opts = {
+            "EnforceDo": [0, 0],
+            "dt": self.dt,
+            "SwitchingThreshold": [self.threshold, self.threshold],
+        }
+
+    def test_values(self):
+        try:
+            self.sim = jsf.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="operator-splitting")
+        except ZeroDivisionError:
+            self.assertTrue(False)
+
+
 class TestBirthDeathExample(unittest.TestCase):
     def setUp(self):
         self.num_reps = 500

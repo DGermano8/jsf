@@ -72,7 +72,6 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
 
     DoDisc = [(x <= threshold and x==round(x)) for x, threshold in zip(x0, SwitchingThreshold)]
 
-
     # identify which compartment is in which reaction:
     NuComp = [[value != 0 for value in row] for row in nu]
     ReactComp = [[value != 0 for value in row] for row in nuReactant]
