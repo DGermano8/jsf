@@ -126,7 +126,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     while ContT < t_max:
 
         Dtau = dt
-        Xprev = [X[i][iters] for i in range(len(X))]
+        Xprev = [x[iters] for x in X]
         Props = rates(Xprev, ContT)
 
         # Perform the Forward Euler Step
@@ -256,7 +256,7 @@ def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates
 
 def ComputeIntegralOfFiringTimes(Dtau, Props, rates, Xprev, Xcurr, AbsT):
     # Integrate the cumulative wait times using trapezoid method
-    integralStep = [Dtau * 0.5 * (Props[i] + rates(Xcurr, AbsT + Dtau)[i]) for i in range(len(Props))]
+    integralStep = [Dtau * 0.5 * (p + r) for p, r in zip(Props, rates(Xcurr, AbsT + Dtau))]
     return integralStep
 
 
