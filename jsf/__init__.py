@@ -1,6 +1,6 @@
 import random
 import math
-from typing import Any, Callable, Dict, List, NewType, Tuple
+from typing import Any, Callable, Dict, List, NewType, Tuple, Union
 
 
 CompartmentValue = NewType('CompartmentValue', float)
@@ -186,11 +186,11 @@ def JumpSwitchFlowSimulator(
                         for rand, integral, disc in zip(randTimes, integralOfFiringTimes, frozenReaction)
                     ]
 
-            if NNZ(firedReactions) > 0:
+            if any(firedReactions):
                 # Identify which reactions have fired
                 tauArray = ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,Dtau,nRates,integralStep)
 
-                if NNZ(tauArray) > 0:
+                if num_non_zero(tauArray) > 0:
 
                     # Update the discrete compartments
                     Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc, frozenReaction)
@@ -370,10 +370,10 @@ def MatrixSubtractAB(MatrixA,MatrixB):
 def MatrixPlusAB(MatrixA,MatrixB):
     APlusB = [[a + b for a, b in zip(row1, row2)] for row1, row2 in zip(MatrixA, MatrixB)]
     return APlusB
-def NNZ(Array):
-    # NumberOfNonZeros
-    non_zero_count = sum(1 for element in Array if element != 0)
-    return non_zero_count
+
+def num_non_zero(array: Union[List[float], List[int], List[Time]]) -> int:
+    return sum(1 for element in array if element != 0)
+
 def MatrixDOTArray(Matrix,Array):
     result = [sum(row[i] * Array[i] for i in range(len(Array))) for row in Matrix]
     return result
