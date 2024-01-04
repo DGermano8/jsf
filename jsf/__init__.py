@@ -1,6 +1,12 @@
 import random
 import math
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, NewType, Tuple
+
+
+CompartmentValue = NewType('CompartmentValue', float)
+SystemState = NewType('SystemState', List[CompartmentValue])
+Time = NewType('Time', float)
+
 
 def jsf(x0, rates, stoich, t_max, **kwargs):
     """Generates a sample from the JSF process.
@@ -32,11 +38,11 @@ def jsf(x0, rates, stoich, t_max, **kwargs):
 
 
 def JumpSwitchFlowSimulator(
-        x0: List[float],
-        rates: Callable[[List[float], float], List[float]],
+        x0: SystemState,
+        rates: Callable[[SystemState, Time], List[float]],
         stoich: Dict[str, Any],
-        t_max: float,
-        options: Dict[str, Any]) -> Tuple[List[List[float]], List[float]]:
+        t_max: Time,
+        options: Dict[str, Any]) -> Tuple[List[List[CompartmentValue]], List[Time]]:
     """
     Simulate a jump-switch-flow process using the operator splitting
     method.
@@ -66,7 +72,7 @@ def JumpSwitchFlowSimulator(
     nRates = len(nu)
     nCompartments = len(nu[0])
     nuReactant = stoich["nuReactant"] # type: List[List[float]]
-    dt = options["dt"] # type: float
+    dt = options["dt"] # type: Time
 
     # This is to enable us to use a Boolean list here while still
     # accepting 0/1 as input. In future versions it would be nice to
@@ -104,18 +110,18 @@ def JumpSwitchFlowSimulator(
     randTimes = [random.random() for _ in range(nRates)]
 
 
-    tauArray = [0.0]*nRates
+    tauArray = [Time(0.0)]*nRates
 
     overFlowAllocation = round(1000 * (t_max+dt)/dt + 1)
 
     # initialise solution arrays
     X = [[x0[i]] for i in range(nCompartments)]
-    TauArr = [0.0]
+    TauArr = [Time(0.0)]
     iters = 0
 
     # Track Absolute time
-    AbsT = 0.0
-    ContT = 0.0
+    AbsT = Time(0.0)
+    ContT = Time(0.0)
 
     Xprev = x0
     Xcurr = x0
@@ -132,7 +138,7 @@ def JumpSwitchFlowSimulator(
     while ContT < t_max:
 
         Dtau = dt
-        Xprev = [x[iters] for x in X]
+        Xprev = SystemState([x[iters] for x in X])
         Props = rates(Xprev, ContT)
 
         # Perform the Forward Euler Step
@@ -142,7 +148,7 @@ def JumpSwitchFlowSimulator(
         Dtau, correctInteger, DoDisc, frozenReaction, NewDoDisc, NewfrozenReaction, newlyDiscCompIndex = UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, frozenReaction, compartInNu, nCompartments,nRates)
 
         # Only apply the forward Euler step if the compartment is continuous.
-        Xcurr = [X[i][iters] + (0 if DoDisc[i] else Dtau * dXdt[i]) for i in range(nCompartments)]
+        Xcurr = SystemState([X[i][iters] + (0 if DoDisc[i] else Dtau * dXdt[i]) for i in range(nCompartments)])
 
         # Update the discrete compartments, if a state has just become discrete
         OriginalDoDisc = DoDisc[:]
@@ -156,7 +162,7 @@ def JumpSwitchFlowSimulator(
 
         AbsT = ContT
         DtauContStep = Dtau
-        TimePassed = 0
+        TimePassed = Time(0.0)
 
         firstStayWhileLoop = True
         while stayWhile:
@@ -209,7 +215,7 @@ def JumpSwitchFlowSimulator(
                 stayWhile = False
 
         iters = iters + 1
-        ContT = ContT + DtauContStep
+        ContT = Time(ContT + DtauContStep)
 
         TauArr.append(ContT)
         for i in range(len(X)):
