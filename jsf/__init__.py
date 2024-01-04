@@ -59,9 +59,6 @@ def JumpSwitchFlowSimulator(
     Returns:
         A list containing the time series of the state of the system.
     """
-    # predefine and initialise the system
-    # TODO - add default options
-
     # NOTE In the nu-matrix each row is a reaction and each column
     # describes the number items of that species used in the reaction.
     # There is one rate for each reaction and since there is a column
