@@ -1,5 +1,6 @@
 import random
 import math
+from typing import Any, Callable, Dict, List, Tuple
 
 def jsf(x0, rates, stoich, t_max, **kwargs):
     """Generates a sample from the JSF process.
@@ -30,7 +31,12 @@ def jsf(x0, rates, stoich, t_max, **kwargs):
     return result
 
 
-def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
+def JumpSwitchFlowSimulator(
+        x0: List[float],
+        rates: Callable[[List[float], float], List[float]],
+        stoich: Dict[str, Any],
+        t_max: float,
+        options: Dict[str, Any]) -> Tuple[List[List[float]], List[float]]:
     """
     Simulate a jump-switch-flow process using the operator splitting
     method.
@@ -55,12 +61,12 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     # There is one rate for each reaction and since there is a column
     # for each species we can use the length of the first column to
     # find the number of species in the system.
-    nu = stoich["nu"]
+
+    nu = stoich["nu"] # type: List[List[float]]
     nRates = len(nu)
     nCompartments = len(nu[0])
-    nuReactant = stoich["nuReactant"]
-
-    dt = options["dt"]
+    nuReactant = stoich["nuReactant"] # type: List[List[float]]
+    dt = options["dt"] # type: float
 
     # This is to enable us to use a Boolean list here while still
     # accepting 0/1 as input. In future versions it would be nice to
@@ -68,7 +74,7 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
     # compatibility so we will leave it for now.
     EnforceDo = [(not (ed == 0)) for ed in options["EnforceDo"]]
 
-    SwitchingThreshold = options["SwitchingThreshold"]
+    SwitchingThreshold = options["SwitchingThreshold"] # type: List[int]
 
     DoDisc = [(x <= threshold and x==round(x)) for x, threshold in zip(x0, SwitchingThreshold)]
 
