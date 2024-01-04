@@ -100,11 +100,11 @@ def JumpSwitchFlowSimulator(
                     frozenReaction[reactionIdx] = True
 
     # initialise discrete sum compartments
-    integralOfFiringTimes = [0]*nRates
+    integralOfFiringTimes = [0.0]*nRates
     randTimes = [random.random() for _ in range(nRates)]
 
 
-    tauArray = [0]*nRates
+    tauArray = [0.0]*nRates
 
     overFlowAllocation = round(1000 * (t_max+dt)/dt + 1)
 
@@ -114,8 +114,8 @@ def JumpSwitchFlowSimulator(
     iters = 0
 
     # Track Absolute time
-    AbsT = 0
-    ContT = 0
+    AbsT = 0.0
+    ContT = 0.0
 
     Xprev = x0
     Xcurr = x0
