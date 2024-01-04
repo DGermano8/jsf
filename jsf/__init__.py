@@ -142,13 +142,13 @@ def JumpSwitchFlowSimulator(
         Props = rates(Xprev, ContT)
 
         # Perform the Forward Euler Step
-        dXdt = ComputedXdt(Xprev, Props, nu, frozenReaction, nCompartments)
+        dXdt = ComputedXdt(Props, nu, frozenReaction, nCompartments)
 
         # check if any states change in this step
         Dtau, correctInteger, DoDisc, frozenReaction, NewDoDisc, NewfrozenReaction, newlyDiscCompIndex = UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, frozenReaction, compartInNu, nCompartments,nRates)
 
         # Only apply the forward Euler step if the compartment is continuous.
-        Xcurr = SystemState([X[i][iters] + (0 if DoDisc[i] else Dtau * dXdt[i]) for i in range(nCompartments)])
+        Xcurr = SystemState([CompartmentValue(X[i][iters] + (0 if DoDisc[i] else Dtau * dXdt[i])) for i in range(nCompartments)])
 
         # Update the discrete compartments, if a state has just become discrete
         OriginalDoDisc = DoDisc[:]
@@ -219,7 +219,7 @@ def JumpSwitchFlowSimulator(
 
         TauArr.append(ContT)
         for i in range(len(X)):
-            X[i].append(X[i][iters - 1] + (0 if DoDisc[i] else (DtauContStep - TimePassed) * dXdt[i]))
+            X[i].append(CompartmentValue(X[i][iters - 1] + (0 if DoDisc[i] else (DtauContStep - TimePassed) * dXdt[i])))
 
         if correctInteger == 1:
             pos = newlyDiscCompIndex
@@ -272,13 +272,26 @@ def ComputeIntegralOfFiringTimes(Dtau, Props, rates, Xprev, Xcurr, AbsT):
     return integralStep
 
 
-def ComputedXdt(Xprev, Props, nu, frozenReaction, nCompartments):
+def ComputedXdt(
+        Props: List[float],
+        nu: List[List[float]],
+        frozenReaction: List[bool],
+        nCompartments: int) -> List[float]:
     """
     Compute the derivative of the state vector at time t for the
     continuous compartments by summing the contributions from each
     reaction.
+
+    Args:
+        Props: A list of the propensities of each reaction.
+        nu: The stoichiometry matrix.
+        frozenReaction: A list of booleans indicating which reactions
+            are frozen.
+        nCompartments: The number of compartments in the system.
     """
-    return [sum(0 if frozenReaction[i] else Props[i] * nu[i][j] for i in range(len(Props))) for j in range(nCompartments)]
+    return [sum(0 if frozenReaction[i] else Props[i] * nu[i][j]
+                for i in range(len(Props)))
+            for j in range(nCompartments)]
 
 
 def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, frozenReaction, compartInNu, nCompartments,nRates):
