@@ -16,7 +16,9 @@ def JumpSwitchFlowExact(
         t_max: Time,
         options: Dict[str, Any]) -> Trajectory:
     """
-    Simulate a jump-switch flow model exactly.
+    Simulate a jump-switch flow model numerically by using forward
+    Euler. It is exact in the sense that it does not use operator
+    splitting.
 
     Args:
         x0: Initial state.
@@ -80,15 +82,14 @@ def _new_jump_clock(
     """
     Generate a new jump clock.
 
-    Args:
-        is_jumping: Whether the reaction is jumping.
-
-    Returns:
-        New jump clock value.
+    Notes:
+        If the system is not jumping then the jump clock is set to
+    infinity. Otherwise, it takes a random value from the uniform
+    distribution on [0, 1].
     """
-    raise RuntimeError('Not implemented')
-    rand_jump_clock = float('inf') # TODO Implement this!
-    return rand_jump_clock if is_jumping else JumpClock(float('inf'))
+    return JumpClock(
+        random.uniform(0.0, 1.0) if is_jumping else float('inf')
+    )
 
 
 def _update(
