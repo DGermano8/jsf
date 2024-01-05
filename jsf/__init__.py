@@ -1,10 +1,10 @@
 import random
 import math
 from typing import Any, Callable, Dict, List, NewType, Tuple, Union
-from jsf.types import Time, SystemState, CompartmentValue
+from jsf.types import Time, SystemState, CompartmentValue, Trajectory
 
 
-def jsf(x0, rates, stoich, t_max, **kwargs):
+def jsf(x0: SystemState, rates, stoich, t_max, **kwargs) -> Trajectory:
     """Generates a sample from the JSF process.
 
     Args:
@@ -38,7 +38,7 @@ def JumpSwitchFlowSimulator(
         rates: Callable[[SystemState, Time], List[float]],
         stoich: Dict[str, Any],
         t_max: Time,
-        options: Dict[str, Any]) -> Tuple[List[List[CompartmentValue]], List[Time]]:
+        options: Dict[str, Any]) -> Trajectory:
     """
     Simulate a jump-switch-flow process using the operator splitting
     method.
@@ -225,7 +225,7 @@ def JumpSwitchFlowSimulator(
                     randTimes[jj] = random.random()
             newlyDiscCompIndex = None
 
-    return X, TauArr
+    return Trajectory((X, TauArr))
 
 def ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,dt,nRates,integralStep):
     tauArray = [0.0] * nRates
