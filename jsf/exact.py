@@ -29,9 +29,9 @@ def JumpSwitchFlowExact(
         Trajectory of the simulation.
     """
     is_jumping = _is_jumping(x0, stoich, options)
-    jump_clocks = map(_new_jump_clock, is_jumping)
+    jump_clocks = [_new_jump_clock(is_j) for is_j in is_jumping]
     ext_state = ExtendedState(
-        (curr_state, is_jumping, curr_jump_clocks, Time(0.0))
+        (x0, is_jumping, jump_clocks, Time(0.0))
     )
 
     time = ext_state[3]
@@ -48,13 +48,31 @@ def JumpSwitchFlowExact(
     return Trajectory((compartment_histories, times))
 
 
-def _is_jumpting(
+def _is_jumping(
         x0: SystemState,
         stoich: Dict[str, Any],
         options: Dict[str, Any]) -> List[bool]:
-    # TODO Implement this!
-    raise RuntimeError('Not implemented')
-    return []
+    """
+    Determine which reactions are jumping.
+
+    Notes:
+        A reaction is jumping if at least one of the reactants or
+    products is discrete.
+    """
+    threshold = options['SwitchingThreshold']
+    is_discrete = [x0[i] <= threshold[i] for i in range(len(x0))]
+    is_reactant = [[n != 0 for n in r] for r in stoich['nuReactant']]
+    is_product = [[n != 0 for n in r] for r in stoich['nuProduct']]
+    num_reactions = len(is_reactant)
+    num_compartments = len(is_discrete)
+    result = [False] * num_reactions
+
+    for rix in range(num_reactions):
+        if any([is_discrete[ix] for ix in range(num_compartments)
+                if is_reactant[rix][ix] or is_product[rix][ix]]):
+            result[rix] = True
+
+    return result
 
 
 def _new_jump_clock(
