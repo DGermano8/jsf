@@ -77,6 +77,15 @@ def _is_jumping(
 
 def _new_jump_clock(
         is_jumping: bool) -> JumpClock:
+    """
+    Generate a new jump clock.
+
+    Args:
+        is_jumping: Whether the reaction is jumping.
+
+    Returns:
+        New jump clock value.
+    """
     raise RuntimeError('Not implemented')
     rand_jump_clock = float('inf') # TODO Implement this!
     return rand_jump_clock if is_jumping else JumpClock(float('inf'))
@@ -88,6 +97,19 @@ def _update(
         rates: Callable[[SystemState, Time], List[float]],
         stoich: Dict[str, Any],
         options: Dict[str, Any]) -> ExtendedState:
+    """
+    Update the state of the system.
+
+    Args:
+        x0: Current state.
+        delta_time: Time step.
+        rates: Function that computes reaction rates.
+        stoich: Stoichiometry matrix.
+        options: Simulation options.
+
+    Returns:
+        Updated state.
+    """
     # TODO Implement this!
     raise RuntimeError('Not implemented')
     return ExtendedState((SystemState([]), [JumpClock(0.0)], Time(0.0)))
@@ -98,6 +120,18 @@ def _jump(
         reaction: int,
         stoich: Dict[str, Any],
         options: Dict[str, Any]) -> ExtendedState:
+    """
+    Jump the system to a new state.
+
+    Args:
+        x0: Current state.
+        reaction: Reaction to jump to.
+        stoich: Stoichiometry matrix.
+        options: Simulation options.
+
+    Returns:
+        New state.
+    """
     # TODO Implement this!
     raise RuntimeError('Not implemented')
     return ExtendedState((SystemState([]), [JumpClock(0.0)], Time(0.0)))
