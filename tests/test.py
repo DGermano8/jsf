@@ -90,10 +90,17 @@ class TestBirthDeathExample(unittest.TestCase):
         ]
         self.x_timeseriess = [sim[0][0] for sim in self.sims]
 
+        self.sims_exact = [
+            jsf.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="exact")
+            for x0 in self.x0s
+        ]
+        self.x_timeseriess_exact = [sim[0][0] for sim in self.sims_exact]
+
     def test_output_shape(self):
         self.assertTrue(len(self.sims) == self.num_reps)
+        self.assertTrue(len(self.sims_exact) == self.num_reps)
 
-    def test_mean_field_soln(self):
+    def test_op_split_mean_field_soln(self):
         # import pdb; pdb.set_trace()
         self.assertTrue(all([foo[0] == self.x0 for foo in self.x_timeseriess]))
         final_x = [xs[-1] for xs in self.x_timeseriess]
@@ -106,6 +113,18 @@ class TestBirthDeathExample(unittest.TestCase):
         thry_mean_final_x = self.mean_field_soln(self.t_max)
         self.assertTrue(abs(mean_final_x - thry_mean_final_x) < 2 * std_err_final_x)
 
+    def test_exact_mean_field_soln(self):
+        # import pdb; pdb.set_trace()
+        self.assertTrue(all([foo[0] == self.x0 for foo in self.x_timeseriess_exact]))
+        final_x = [xs[-1] for xs in self.x_timeseriess_exact]
+        mean_final_x = sum(final_x) / len(final_x)
+        # remember to use the unbiased estimator of the variance
+        std_final_x = math.sqrt(
+            sum([(x - mean_final_x) ** 2 for x in final_x]) / (len(final_x) - 1)
+        )
+        std_err_final_x = std_final_x / math.sqrt(self.num_reps)
+        thry_mean_final_x = self.mean_field_soln(self.t_max)
+        self.assertTrue(abs(mean_final_x - thry_mean_final_x) < 2 * std_err_final_x)
 
 class TestSISExample(unittest.TestCase):
 
