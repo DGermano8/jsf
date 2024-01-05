@@ -1,11 +1,7 @@
 import random
 import math
 from typing import Any, Callable, Dict, List, NewType, Tuple, Union
-
-
-CompartmentValue = NewType('CompartmentValue', float)
-SystemState = NewType('SystemState', List[CompartmentValue])
-Time = NewType('Time', float)
+from jsf.types import Time, SystemState, CompartmentValue
 
 
 def jsf(x0, rates, stoich, t_max, **kwargs):
