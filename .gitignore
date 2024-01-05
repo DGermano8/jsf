@@ -2,3 +2,4 @@ venv/
 *~
 jsf/__pycache__/
 tests/__pycache__/
+build/
