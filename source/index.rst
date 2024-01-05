@@ -216,6 +216,24 @@ point it follows the differential equations.
    :align: center
    :alt: SIS epidemic example
 
+Types
+-----
+
+The ``jsf.types`` module provides some key types for this package.
+There is nothing fancy here; they are just used to make the type hints
+more informative and help to leverage ``mypy``.
+
+- ``CompartmentValue``: the value of a compartment, this is a ``float``.
+- ``SystemState``: the state of the system, this is a list of ``CompartmentValue`` s.
+- ``Time``: the time, this is a float.
+
+Recall you can use the following to type check the code:
+
+.. code-block:: sh
+
+    mypy jsf tests
+
+
 Installation
 ------------
 
