@@ -124,6 +124,31 @@ def _update_state(
     ])
 
 
+def _update_jump_clocks(
+        curr_time: Time,
+        delta_time: Time,
+        curr_jump_clocks: List[JumpClock],
+        curr_state: SystemState,
+        curr_reaction_rates: List[float],
+        next_state: SystemState,
+        next_reaction_rates: List[float]) -> List[JumpClock]:
+    """
+    Update the jump clocks using the trapezoidal rule and the current
+    and next system state to approximate the reaction rates.
+
+    Notes:
+        Because `enumerate` returns a copy of each element in the
+    list we need to assign this value back at the end of the loop for
+    it to be updated.
+    """
+    next_jump_clocks = copy.deepcopy(curr_jump_clocks)
+    for ix, jc in enumerate(next_jump_clocks):
+        integral = 0.5 * delta_time * (next_reaction_rates[ix] + curr_reaction_rates[ix])
+        jc.set_clock(jc.clock + (math.exp(-integral) - 1) * (jc.clock + 1 - jc.start_time))
+        next_jump_clocks[ix] = jc
+    return next_jump_clocks
+
+
 def _update(
         x0: ExtendedState,
         delta_time: Time,
