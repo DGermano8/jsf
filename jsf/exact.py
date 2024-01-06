@@ -97,8 +97,10 @@ def _new_jump_clock(
     infinity. Otherwise, it takes a random value from the uniform
     distribution on [0, 1].
     """
+    u = Time(random.uniform(0.0, 1.0))
     return JumpClock(
-        random.uniform(0.0, 1.0) if is_jumping else float('inf')
+        clock = u if is_jumping else Time(float('inf')),
+        start_time = u if is_jumping else Time(float('inf'))
     )
 
 
