@@ -39,6 +39,7 @@ def JumpSwitchFlowExact(
 
     Returns:
         Trajectory of the simulation.
+
     """
     is_jumping = _is_jumping(x0, stoich, options)
     jump_clocks = [_new_jump_clock(is_j) for is_j in is_jumping]
@@ -156,17 +157,71 @@ def _update(
         stoich: Dict[str, Any],
         options: Dict[str, Any]) -> ExtendedState:
     """
-    Update the state of the system.
+    Updated state of the (extended) system using forward-Euler.
+    """
+    threshold = options['SwitchingThreshold']
+    nu_mat = stoich['nu']
 
-    Args:
-        x0: Current state.
-        delta_time: Time step.
-        rates: Function that computes reaction rates.
-        stoich: Stoichiometry matrix.
-        options: Simulation options.
+    # ----------------------------------------------------------------
+    # 0. Establish current state
 
-    Returns:
-        Updated state.
+    curr_state = x0[0]
+    curr_is_discrete = [curr_state[i] <= threshold[i] for i in range(len(curr_state))]
+    curr_is_jumping = x0[1]
+    curr_jump_clocks = x0[2]
+    curr_time = x0[3]
+    curr_r_rates = rates(curr_state, curr_time)
+
+    # ----------------------------------------------------------------
+    # 1. Propose new states
+
+    next_time = Time(curr_time + delta_time)
+    next_state = _update_state(
+        curr_state, curr_is_jumping, curr_r_rates, nu_mat, delta_time)
+    next_r_rates = rates(next_state, next_time)
+    next_is_discrete = [next_state[i] <= threshold[i] for i in range(len(next_state))]
+    next_is_jumping = _is_jumping(next_state, stoich, options)
+    next_jump_clocks = _update_jump_clocks(
+        curr_time, delta_time, curr_jump_clocks, curr_state,
+        curr_r_rates, next_state, next_r_rates)
+
+    # ----------------------------------------------------------------
+    # 2. Exit early if this was no jumps or switches.
+
+    no_switches = all([cid == nid
+                       for cid, nid in zip(curr_is_discrete, next_is_discrete)])
+    no_jumps = all([jc.clock >= 0 for jc in next_jump_clocks])
+
+    if no_jumps and no_switches:
+        return ExtendedState(
+            (next_state, next_is_jumping, next_jump_clocks, next_time)
+        )
+
+    # ----------------------------------------------------------------
+    # 3. Go back to when the first event and apply it before
+    # recursing.
+
+    first_switch_time = Time(float('inf')) if no_switches else _first_switch_time()
+    first_jump_time = Time(float('inf')) if no_jumps else _first_jump_time()
+
+    next_time = Time(min(first_switch_time, first_jump_time))
+    new_delta_time = next_time - curr_time
+    next_state = _update_state(
+        curr_state, curr_is_jumping, curr_r_rates, nu_mat, new_delta_time)
+
+    if next_time == first_switch_time:
+        next_state, next_is_jumping, next_jump_clocks = _switch()
+    else
+        assert next_time == first_jump_time:
+        next_state, next_is_jumping, next_jump_clocks = _jump()
+
+    next_ext_state = ExtendedState(
+        (next_state, next_is_jumping, next_jump_clocks, next_time)
+    )
+    remaining_delta_time = delta_time - new_delta_time
+    return _update(next_ext_state, remaining_delta_time, rates, stoich, options)
+
+
     """
     # TODO Implement this!
     raise RuntimeError('Not implemented')
