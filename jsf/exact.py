@@ -1,9 +1,19 @@
 import random
 import math
+import copy
 from typing import Any, Callable, Dict, List, NewType, Tuple, Union
+from dataclasses import dataclass
 from jsf.types import Time, SystemState, CompartmentValue, Trajectory
 
-JumpClock = NewType('JumpClock', float)
+
+@dataclass
+class JumpClock:
+    clock: Time
+    start_time: Time
+
+    def set_clock(self, new_clock: float) -> None:
+        self.clock = Time(new_clock)
+
 
 ExtendedState = NewType('ExtendedState',
                         Tuple[SystemState, List[bool], List[JumpClock], Time])
