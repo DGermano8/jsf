@@ -102,6 +102,26 @@ def _new_jump_clock(
     )
 
 
+def _update_state(
+        state: SystemState,
+        is_jumping: List[bool],
+        reaction_rates: List[float],
+        nu_matrix,
+        delta_time: Time) -> SystemState:
+    """
+    Update the state of the system with a single forward-Euler step.
+    """
+    dx_dt = [
+        sum(0 if is_jumping[rix] else reaction_rates[rix] * nu_matrix[rix][cix]
+            for rix in range(len(reaction_rates)))
+        for cix in range(len(state))
+    ]
+    return SystemState([
+        state[cix] + dx_dt[cix] * delta_time
+        for cix in range(len(state))
+    ])
+
+
 def _update(
         x0: ExtendedState,
         delta_time: Time,
