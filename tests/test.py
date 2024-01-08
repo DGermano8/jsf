@@ -114,7 +114,6 @@ class TestBirthDeathExample(unittest.TestCase):
         self.assertTrue(abs(mean_final_x - thry_mean_final_x) < 2 * std_err_final_x)
 
     def test_exact_mean_field_soln(self):
-        # import pdb; pdb.set_trace()
         self.assertTrue(all([foo[0] == self.x0 for foo in self.x_timeseriess_exact]))
         final_x = [xs[-1] for xs in self.x_timeseriess_exact]
         mean_final_x = sum(final_x) / len(final_x)
