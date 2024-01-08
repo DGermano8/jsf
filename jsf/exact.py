@@ -26,9 +26,9 @@ def JumpSwitchFlowExact(
         t_max: Time,
         options: Dict[str, Any]) -> Trajectory:
     """
-    Simulate a jump-switch flow model numerically by using forward
-    Euler. It is exact in the sense that it does not use operator
-    splitting.
+    Simulate a jump-switch flow model numerically by using
+    forward-Euler. It is exact in the sense that it does not use
+    operator splitting.
 
     Args:
         x0: Initial state.
@@ -71,6 +71,9 @@ def _is_jumping(
     Notes:
         A reaction is jumping if at least one of the reactants or
     products is discrete.
+
+    TODO There should be a check in here to make sure that there are a
+    sufficient number of reactants to carry out the reaction!
     """
     thresholds = options['SwitchingThreshold']
     is_discrete = [x0[i] <= thresholds[i] for i in range(len(x0))]
@@ -119,10 +122,12 @@ def _update_state(
             for rix in range(len(reaction_rates)))
         for cix in range(len(state))
     ]
-    return SystemState([
+    next_state = [
         state[cix] + dx_dt[cix] * delta_time
         for cix in range(len(state))
-    ])
+    ]
+    assert all([v >= 0 for v in next_state])
+    return SystemState(next_state)
 
 
 def _update_jump_clocks(
@@ -201,50 +206,101 @@ def _update(
     # 3. Go back to when the first event and apply it before
     # recursing.
 
-    first_switch_time = Time(float('inf')) if no_switches else _first_switch_time()
-    first_jump_time = Time(float('inf')) if no_jumps else _first_jump_time()
+    first_switch_ix, first_switch_time = (
+        (-1, Time(float('inf'))) if no_switches else
+        _first_switch(curr_state, next_state, curr_time, next_time, thresholds))
+    first_jump_ix, first_jump_time = (
+        (-1, Time(float('inf'))) if no_jumps else
+        _first_jump(curr_r_rates, next_r_rates, curr_time, next_time, curr_jump_clocks, next_jump_clocks))
 
     next_time = Time(min(first_switch_time, first_jump_time))
-    new_delta_time = next_time - curr_time
+    new_delta_time = Time(next_time - curr_time)
     next_state = _update_state(
         curr_state, curr_is_jumping, curr_r_rates, nu_mat, new_delta_time)
 
     if next_time == first_switch_time:
-        next_state, next_is_jumping, next_jump_clocks = _switch()
-    else
-        assert next_time == first_jump_time:
-        next_state, next_is_jumping, next_jump_clocks = _jump()
+        # Because a switch has occurred we want the value to snap onto
+        # the threshold value so we set it to be that value.
+        next_state[first_switch_ix] = thresholds[first_switch_ix]
+    else:
+        assert next_time == first_jump_time
+        next_state = _jump(next_state, first_jump_ix, stoich, options)
 
+    next_is_jumping = _is_jumping(next_state, stoich, options)
+    next_jump_clocks = [_new_jump_clock(is_j) for is_j in next_is_jumping]
     next_ext_state = ExtendedState(
         (next_state, next_is_jumping, next_jump_clocks, next_time)
     )
-    remaining_delta_time = delta_time - new_delta_time
+    remaining_delta_time = Time(delta_time - new_delta_time)
     return _update(next_ext_state, remaining_delta_time, rates, stoich, options)
 
 
+def _first_switch(
+        x0: SystemState,
+        x1: SystemState,
+        t0: Time,
+        t1: Time,
+        thresh: List[CompartmentValue]) -> Tuple[int, Time]:
     """
-    # TODO Implement this!
-    raise RuntimeError('Not implemented')
-    return ExtendedState((SystemState([]), [JumpClock(0.0)], Time(0.0)))
+    Return the index and the time of the first switch that occurred
+    when moving from state x0 to x1.
+    """
+    earliest_switch_time, earliest_switch_ix = float('inf'), int(10**4299)
+
+    for ix, v0 in enumerate(x0):
+        v1 = x1[ix]
+        if v0 > thresh[ix] and v1 <= thresh[ix]:
+            s_t = (thresh[ix]*(t1 - t0) + v1*t0 - v0*t1) / (v1 - v0)
+            assert t0 < s_t and s_t < t1
+            assert s_t != earliest_switch_time
+            if s_t < earliest_switch_time:
+                earliest_switch_time = s_t
+                earliest_switch_ix = ix
+
+    assert earliest_switch_time < float('inf')
+    return earliest_switch_ix, Time(earliest_switch_time)
+
+
+def _first_jump(r0s: List[float],
+                r1s: List[float],
+                t0: Time,
+                t1: Time,
+                j0s: List[JumpClock],
+                j1s: List[JumpClock]) -> Tuple[int, Time]:
+    """
+    Return the index and the time of the first jump that occurred.
+    """
+    delta_t = t1 - t0
+    min_h = float('inf')
+    earliest_jump_time, earliest_jump_ix = float('inf'), int(10**4299)
+
+    for ix, j0 in enumerate(j0s):
+        if j0.clock > 0 and j1s[ix].clock <= 0:
+            alpha = math.log((j0.clock + 1 - j0.start_time) / (1 - j0.start_time))
+            delta_r = r1s[ix] - r0s[ix]
+
+            h = (- delta_t * r0s[ix] + math.sqrt((delta_t * r0s[ix])**2 + 2 * alpha * delta_t * delta_r)) / delta_r
+            assert 0 < h and h < delta_t
+            if h < min_h:
+                min_h = h
+                earliest_jump_time = t0 + min_h
+                earliest_jump_ix = ix
+
+    assert earliest_jump_time < float('inf')
+    return earliest_jump_ix, Time(earliest_jump_time)
 
 
 def _jump(
-        x0: ExtendedState,
-        reaction: int,
+        x0: SystemState,
+        reaction_ix: int,
         stoich: Dict[str, Any],
-        options: Dict[str, Any]) -> ExtendedState:
+        options: Dict[str, Any]) -> SystemState:
     """
     Jump the system to a new state.
 
-    Args:
-        x0: Current state.
-        reaction: Reaction to jump to.
-        stoich: Stoichiometry matrix.
-        options: Simulation options.
-
-    Returns:
-        New state.
+    TODO Implement checks that this hasn't hit the annoying edge case
+    or pushed a value across the threshold.
     """
-    # TODO Implement this!
-    raise RuntimeError('Not implemented')
-    return ExtendedState((SystemState([]), [JumpClock(0.0)], Time(0.0)))
+    nu = stoich['nu']
+    x1 = [x0[ix] + nu[reaction_ix][ix] for ix in range(len(x0))]
+    return SystemState(x1)
