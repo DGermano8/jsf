@@ -37,14 +37,28 @@ class AnEdgeCase(unittest.TestCase):
             "SwitchingThreshold": [self.threshold, self.threshold],
         }
 
-    def test_values(self):
+    def test_values_op(self):
         try:
             self.sim = jsf.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="operator-splitting")
         except ZeroDivisionError:
             self.assertTrue(False)
 
+    def test_values_exact(self):
+        try:
+            self.sim = jsf.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="exact")
+        except ZeroDivisionError:
+            self.assertTrue(False)
+
 
 class TestBirthDeathExample(unittest.TestCase):
+    """
+    Test birth-death simulations against the results of the mean-field
+    approximation.
+
+    This checks both the exact implementation and the
+    operator-splitting implementation.
+    """
+
     def setUp(self):
         self.num_reps = 500
 
@@ -160,18 +174,24 @@ class TestSISExample(unittest.TestCase):
             "dt": 0.1,
             "SwitchingThreshold": [self.threshold, self.threshold],
         }
-        self.sim = jsf.JumpSwitchFlowSimulator(x0, rates, stoich, 10.0, my_opts)
 
-        self.susceptible_timeseries = self.sim[0][0]
-        self.infected_timeseries = self.sim[0][1]
+        # Using the operator splitting sampler
+        self.sim_op = jsf.JumpSwitchFlowSimulator(x0, rates, stoich, 10.0, my_opts)
+        self.susceptible_timeseries_op = self.sim_op[0][0]
+        self.infected_timeseries_op = self.sim_op[0][1]
 
-    def test_infected_timeseries(self):
+        # Using the exact sampler
+        self.sim_exact = jsf.jsf(x0, rates, stoich, 10.0, config=my_opts, method="exact")
+        self.susceptible_timeseries_exact = self.sim_exact[0][0]
+        self.infected_timeseries_exact = self.sim_exact[0][1]
+
+    def test_infected_timeseries_op(self):
         # extract the elements from the infected timeseries that are
         # less than or equal to the threshold and check that they all
         # take values that are within 1e-6 of an integer. This checks
         # that the process if
 
-        small_i_values = [i for i in self.infected_timeseries if i <= self.threshold]
+        small_i_values = [i for i in self.infected_timeseries_op if i <= self.threshold]
         for i in small_i_values:
             self.assertTrue(abs(i - round(i)) < 1e-6)
 
@@ -180,7 +200,18 @@ class TestSISExample(unittest.TestCase):
         # they are not within 1e-6 of an integer. This checks that the
         # process is evolving continuously.
 
-        large_i_values = [i for i in self.infected_timeseries if i > self.threshold + 1]
+        large_i_values = [i for i in self.infected_timeseries_op if i > self.threshold + 1]
+        for i in large_i_values:
+            self.assertTrue(abs(i - round(i)) > 1e-6)
+
+
+    def test_infected_timeseries_exact(self):
+
+        small_i_values = [i for i in self.infected_timeseries_exact if i <= self.threshold]
+        for i in small_i_values:
+            self.assertTrue(abs(i - round(i)) < 1e-6)
+
+        large_i_values = [i for i in self.infected_timeseries_exact if i > self.threshold + 1]
         for i in large_i_values:
             self.assertTrue(abs(i - round(i)) > 1e-6)
 
