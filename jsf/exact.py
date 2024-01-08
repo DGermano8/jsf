@@ -153,7 +153,7 @@ def _update_jump_clocks(
     """
     next_jump_clocks = copy.deepcopy(curr_jump_clocks)
     for ix, jc in enumerate(next_jump_clocks):
-        if not math.isfinite(jc.clock):
+        if math.isfinite(jc.clock):
             integral = 0.5 * delta_time * (next_reaction_rates[ix] + curr_reaction_rates[ix])
             jc.set_clock(jc.clock + (math.exp(-integral) - 1) * (jc.clock + 1 - jc.start_time))
             next_jump_clocks[ix] = jc
