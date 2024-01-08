@@ -2,6 +2,7 @@ import random
 import math
 from typing import Any, Callable, Dict, List, NewType, Tuple, Union
 from jsf.types import Time, SystemState, CompartmentValue, Trajectory
+from jsf import exact
 
 
 def jsf(x0: SystemState, rates, stoich, t_max, **kwargs) -> Trajectory:
@@ -23,8 +24,7 @@ def jsf(x0: SystemState, rates, stoich, t_max, **kwargs) -> Trajectory:
         RuntimeError: If the requested method is not implemented.
     """
     if kwargs['method'] is None or kwargs['method'] == 'exact':
-        # throw an error because the method is not implemented
-        raise RuntimeError("Exact method not implemented")
+        result = exact.JumpSwitchFlowExact(x0, rates, stoich, t_max, kwargs['config'])
     elif kwargs['method'] == 'operator-splitting':
         result = JumpSwitchFlowSimulator(x0, rates, stoich, t_max, kwargs['config'])
     else:
