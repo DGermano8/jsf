@@ -142,6 +142,10 @@ def _update_jump_clocks(
     Update the jump clocks using the trapezoidal rule and the current
     and next system state to approximate the reaction rates.
 
+    If the jump clock is infinite, this means that that reaction
+    should never fire in the current state so in this case we
+    propagate the infinite clock value.
+
     Notes:
         Because `enumerate` returns a copy of each element in the
     list we need to assign this value back at the end of the loop for
@@ -149,9 +153,10 @@ def _update_jump_clocks(
     """
     next_jump_clocks = copy.deepcopy(curr_jump_clocks)
     for ix, jc in enumerate(next_jump_clocks):
-        integral = 0.5 * delta_time * (next_reaction_rates[ix] + curr_reaction_rates[ix])
-        jc.set_clock(jc.clock + (math.exp(-integral) - 1) * (jc.clock + 1 - jc.start_time))
-        next_jump_clocks[ix] = jc
+        if not math.isfinite(jc.clock):
+            integral = 0.5 * delta_time * (next_reaction_rates[ix] + curr_reaction_rates[ix])
+            jc.set_clock(jc.clock + (math.exp(-integral) - 1) * (jc.clock + 1 - jc.start_time))
+            next_jump_clocks[ix] = jc
     return next_jump_clocks
 
 
@@ -278,8 +283,11 @@ def _first_jump(r0s: List[float],
         if j0.clock > 0 and j1s[ix].clock <= 0:
             alpha = math.log((j0.clock + 1 - j0.start_time) / (1 - j0.start_time))
             delta_r = r1s[ix] - r0s[ix]
+            if delta_r != 0:
+                h = (- delta_t * r0s[ix] + math.sqrt((delta_t * r0s[ix])**2 + 2 * alpha * delta_t * delta_r)) / delta_r
+            else:
+                h = alpha / r0s[ix]
 
-            h = (- delta_t * r0s[ix] + math.sqrt((delta_t * r0s[ix])**2 + 2 * alpha * delta_t * delta_r)) / delta_r
             assert 0 < h and h < delta_t
             if h < min_h:
                 min_h = h
