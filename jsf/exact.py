@@ -72,8 +72,8 @@ def _is_jumping(
         A reaction is jumping if at least one of the reactants or
     products is discrete.
     """
-    threshold = options['SwitchingThreshold']
-    is_discrete = [x0[i] <= threshold[i] for i in range(len(x0))]
+    thresholds = options['SwitchingThreshold']
+    is_discrete = [x0[i] <= thresholds[i] for i in range(len(x0))]
     is_reactant = [[n != 0 for n in r] for r in stoich['nuReactant']]
     is_product = [[n != 0 for n in r] for r in stoich['nuProduct']]
     num_reactions = len(is_reactant)
@@ -159,14 +159,14 @@ def _update(
     """
     Updated state of the (extended) system using forward-Euler.
     """
-    threshold = options['SwitchingThreshold']
+    thresholds = options['SwitchingThreshold'] # type: List[CompartmentValue]
     nu_mat = stoich['nu']
 
     # ----------------------------------------------------------------
     # 0. Establish current state
 
     curr_state = x0[0]
-    curr_is_discrete = [curr_state[i] <= threshold[i] for i in range(len(curr_state))]
+    curr_is_discrete = [curr_state[i] <= thresholds[i] for i in range(len(curr_state))]
     curr_is_jumping = x0[1]
     curr_jump_clocks = x0[2]
     curr_time = x0[3]
@@ -179,7 +179,7 @@ def _update(
     next_state = _update_state(
         curr_state, curr_is_jumping, curr_r_rates, nu_mat, delta_time)
     next_r_rates = rates(next_state, next_time)
-    next_is_discrete = [next_state[i] <= threshold[i] for i in range(len(next_state))]
+    next_is_discrete = [next_state[i] <= thresholds[i] for i in range(len(next_state))]
     next_is_jumping = _is_jumping(next_state, stoich, options)
     next_jump_clocks = _update_jump_clocks(
         curr_time, delta_time, curr_jump_clocks, curr_state,
