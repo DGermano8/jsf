@@ -1,6 +1,8 @@
 import unittest
 import random
 import math
+import time
+
 import jsf
 
 random.seed(1234)
@@ -98,16 +100,28 @@ class TestBirthDeathExample(unittest.TestCase):
             "SwitchingThreshold": [self.threshold],
         }
 
+        op_split_start_time = time.time()
         self.sims = [
             jsf.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="operator-splitting")
             for x0 in self.x0s
         ]
+        op_split_end_time = time.time()
+        # Store the time taken to run the operator splitting sampler
+        # so that we can compare it to the exact sampler. Since the
+        # exact sampler does not use the operator splitting algorithm
+        # it should be slower.
+        self.op_split_time = op_split_end_time - op_split_start_time
+
         self.x_timeseriess = [sim[0][0] for sim in self.sims]
 
+        exact_start_time = time.time()
         self.sims_exact = [
             jsf.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="exact")
             for x0 in self.x0s
         ]
+        exact_end_time = time.time()
+        self.exact_time = exact_end_time - exact_start_time
+
         self.x_timeseriess_exact = [sim[0][0] for sim in self.sims_exact]
 
     def test_output_shape(self):
@@ -138,6 +152,12 @@ class TestBirthDeathExample(unittest.TestCase):
         std_err_final_x = std_final_x / math.sqrt(self.num_reps)
         thry_mean_final_x = self.mean_field_soln(self.t_max)
         self.assertTrue(abs(mean_final_x - thry_mean_final_x) < 2 * std_err_final_x)
+
+    def test_exact_slower_than_op_split(self):
+        # Check that the exact sampler is slower than the operator
+        # splitting sampler as expected.
+        self.assertTrue(self.exact_time > self.op_split_time)
+
 
 class TestSISExample(unittest.TestCase):
 
