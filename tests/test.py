@@ -39,15 +39,31 @@ class AnEdgeCase(unittest.TestCase):
             "SwitchingThreshold": [self.threshold, self.threshold],
         }
 
+    def check_trajectory_is_valid(self, trajectory):
+        # Check that the trajectory is valid in the sense that all the
+        # CompartmentValues are integers if they are less than or
+        # equal to the threshold and are not integers if they are
+        # greater than the threshold (excluding the case of
+        # threshold+n which can happen).
+        comp_valss = trajectory[0]
+        for comp_vals in comp_valss:
+            for comp_val in comp_vals:
+                if comp_val <= self.threshold:
+                    self.assertTrue(abs(comp_val - round(comp_val)) < 1e-6)
+                else:
+                    self.assertTrue(abs(comp_val - round(comp_val)) > 1e-6)
+
     def test_values_op(self):
         try:
             self.sim = jsf.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="operator-splitting")
+            self.check_trajectory_is_valid(self.sim)
         except ZeroDivisionError:
             self.assertTrue(False)
 
     def test_values_exact(self):
         try:
             self.sim = jsf.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="exact")
+            self.check_trajectory_is_valid(self.sim)
         except ZeroDivisionError:
             self.assertTrue(False)
 
