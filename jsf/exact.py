@@ -306,9 +306,22 @@ def _jump(
     """
     Jump the system to a new state.
 
-    TODO Implement checks that this hasn't hit the annoying edge case
-    or pushed a value across the threshold.
+    Note that if the jump will result in a value that is less than the
+    switching threshold but *not* an integer, then we will round it
+    up/down with a probability that ensures on average it takes the
+    value it would have taken without the rounding.
     """
     nu = stoich['nu']
     x1 = [x0[ix] + nu[reaction_ix][ix] for ix in range(len(x0))]
+
+    # Randomly round the values in x1 if necessary to ensure they take
+    # sensible values and preserve the average behaviour.
+    for ix, x in enumerate(x1):
+        if (x < options['SwitchingThreshold'][ix]) and ((x - round(x)) > 1e-10):
+            x_floor = math.floor(x)
+            if random.uniform(0, 1) < (x - x_floor):
+                x1[ix] = x_floor + 1
+            else:
+                x1[ix] = x_floor
+
     return SystemState(x1)
