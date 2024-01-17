@@ -1,7 +1,9 @@
+LICENCE
 setup.py
 jsf/__init__.py
+jsf/exact.py
+jsf/types.py
 jsf.egg-info/PKG-INFO
 jsf.egg-info/SOURCES.txt
 jsf.egg-info/dependency_links.txt
 jsf.egg-info/top_level.txt
-tests/test_placeholder.py

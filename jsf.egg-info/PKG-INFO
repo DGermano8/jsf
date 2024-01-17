@@ -2,6 +2,11 @@ Metadata-Version: 2.1
 Name: jsf
 Version: 0.1
 Summary: Implementation of the jump-switch-flow simulator
-Home-page: https://github.com/DGermano8/jazzy-shrill-fart
+Home-page: https://dgermano8.github.io/JSF/
 Author: Domenic Germano
-Author-email: germanod@student.unimelb.edu.au
+Author-email: domenic.germano@sydney.edu.au
+License: MIT
+Platform: UNKNOWN
+License-File: LICENCE
+
+UNKNOWN
