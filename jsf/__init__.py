@@ -1,17 +1,30 @@
 import random
 import math
+from typing import Any, Callable, Dict, List, NewType, Tuple, Union
+from jsf.types import Time, SystemState, CompartmentValue, Trajectory
+from jsf import exact
 
-def jsf(x0, rates, stoich, t_max, **kwargs):
-    """
-    x0 :: State                 # state at time zero.
-    rates :: State -> Time -> [Rate] # rate function.
-    stoich :: Structure
-    times :: Number             # think "final time"
-    options :: Structure
+
+def jsf(x0: SystemState, rates, stoich, t_max, **kwargs) -> Trajectory:
+    """Generates a sample from the JSF process.
+
+    Args:
+        x0: The initial state of the system.
+        rates: A function that takes the current state and time and
+            returns the rates of each reaction.
+        stoich: A dictionary containing the stoichiometry of the
+            system.
+        t_max: The final time of the simulation.
+        **kwargs: A dictionary containing the simulation options.
+
+    Returns:
+        A list containing the time series of the state of the system.
+
+    Raises:
+        RuntimeError: If the requested method is not implemented.
     """
     if kwargs['method'] is None or kwargs['method'] == 'exact':
-        # throw an error because the method is not implemented
-        raise RuntimeError("Exact method not implemented")
+        result = exact.JumpSwitchFlowExact(x0, rates, stoich, t_max, kwargs['config'])
     elif kwargs['method'] == 'operator-splitting':
         result = JumpSwitchFlowSimulator(x0, rates, stoich, t_max, kwargs['config'])
     else:
@@ -20,102 +33,129 @@ def jsf(x0, rates, stoich, t_max, **kwargs):
     return result
 
 
-def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
+def JumpSwitchFlowSimulator(
+        x0: SystemState,
+        rates: Callable[[SystemState, Time], List[float]],
+        stoich: Dict[str, Any],
+        t_max: Time,
+        options: Dict[str, Any]) -> Trajectory:
     """
-    x0 :: State                 # state at time zero.
-    rates :: State -> Time -> [Rate] # rate function.
-    stoich :: Structure
-    times :: Number             # think "final time"
-    options :: Structure
+    Simulate a jump-switch-flow process using the operator splitting
+    method.
+
+    Args:
+        x0: The initial state of the system.
+        rates: A function that takes the current state and time and
+            returns the rates of each reaction.
+        stoich: A dictionary containing the stoichiometry of the
+            system.
+        t_max: The final time of the simulation.
+        options: A dictionary containing the simulation options.
+
+    Returns:
+        A list containing the time series of the state of the system.
     """
-    # predefine and initialise the system
-    # TODO - add default options
+    # NOTE In the nu-matrix each row is a reaction and each column
+    # describes the number items of that species used in the reaction.
+    # There is one rate for each reaction and since there is a column
+    # for each species we can use the length of the first column to
+    # find the number of species in the system.
 
-    nu = stoich["nu"]
-    nuReactant = stoich["nuReactant"]
-
-    dt = options["dt"]
-    EnforceDo = options["EnforceDo"]
-    SwitchingThreshold = options["SwitchingThreshold"]
-
-    DoDisc = stoich["DoDisc"]
-    DoDisc = [(1 if x <= threshold and x==round(x) else 0) for x, threshold in zip(x0, SwitchingThreshold)]
-    DoCont = ArraySubtractAB([1]*len(DoDisc), DoDisc)
-
+    nu = stoich["nu"] # type: List[List[float]]
     nRates = len(nu)
     nCompartments = len(nu[0])
+    nuReactant = stoich["nuReactant"] # type: List[List[float]]
+    dt = options["dt"] # type: Time
+
+    # This is to enable us to use a Boolean list here while still
+    # accepting 0/1 as input. In future versions it would be nice to
+    # require a Boolean list but that would break backwards
+    # compatibility so we will leave it for now.
+    EnforceDo = [(not (ed == 0)) for ed in options["EnforceDo"]]
+
+    SwitchingThreshold = options["SwitchingThreshold"] # type: List[int]
+
+    DoDisc = [(x <= threshold and x==round(x)) for x, threshold in zip(x0, SwitchingThreshold)]
 
     # identify which compartment is in which reaction:
     NuComp = [[value != 0 for value in row] for row in nu]
     ReactComp = [[value != 0 for value in row] for row in nuReactant]
     compartInNu = [[value != 0 for value in row] for row in MatrixPlusAB(NuComp,ReactComp)]
 
-    discCompartment = [0]*nRates
+    # NOTE the variable `frozenReaction` is used to track which of the
+    # potential reactions are frozen (i.e. only jumping not flowing).
+    # This variable used to be called `discCompartment`. In a few
+    # loops where there used to be a `compartIdx` iterator, these have
+    # been changed to `reactionIdx` since these are looping over the
+    # possible reactions not the compartments.
+    frozenReaction = [False]*nRates
     for idx in range(nCompartments):
-        for compartIdx in range(nRates):
-            if  EnforceDo[idx]==0:
-                if DoDisc[idx]==1 and compartInNu[compartIdx][idx]:
-                    discCompartment[compartIdx] = 1
+        for reactionIdx in range(nRates):
+            if not EnforceDo[idx]:
+                if DoDisc[idx] and compartInNu[reactionIdx][idx]:
+                    frozenReaction[reactionIdx] = True
             else:
-                if DoDisc[idx]==1 and compartInNu[compartIdx][idx]:
-                    discCompartment[compartIdx] = 1
-    contCompartment = ArraySubtractAB([1]*nRates,discCompartment)
+                if DoDisc[idx] and compartInNu[reactionIdx][idx]:
+                    frozenReaction[reactionIdx] = True
+
     # initialise discrete sum compartments
-    integralOfFiringTimes = [0]*nRates
+    integralOfFiringTimes = [0.0]*nRates
     randTimes = [random.random() for _ in range(nRates)]
 
 
-    tauArray = [0]*nRates
+    tauArray = [Time(0.0)]*nRates
 
     overFlowAllocation = round(1000 * (t_max+dt)/dt + 1)
 
     # initialise solution arrays
     X = [[x0[i]] for i in range(nCompartments)]
-    TauArr = [0.0]
+    TauArr = [Time(0.0)]
     iters = 0
 
     # Track Absolute time
-    AbsT = 0
-    ContT = 0
+    AbsT = Time(0.0)
+    ContT = Time(0.0)
 
     Xprev = x0
     Xcurr = x0
 
-    # NewDiscCompartmemt = [0.0] * nCompartments
-    NewDiscCompartmemt = None
+    # The `newlyDiscCompIndex` variable is used to track which
+    # compartment has recently switched to being discrete. It was
+    # previously called NewDiscCompartmemt, not to be confused with
+    # NewfrozenReaction or frozenReaction which is a list of
+    # booleans describing which reactions are frozen.
+    newlyDiscCompIndex = None
     correctInteger = 0
 
     # import pdb; pdb.set_trace()
     while ContT < t_max:
 
         Dtau = dt
-        Xprev = [X[i][iters] for i in range(len(X))]
+        Xprev = SystemState([x[iters] for x in X])
         Props = rates(Xprev, ContT)
 
         # Perform the Forward Euler Step
-        dXdt = ComputedXdt(Xprev, Props, nu, contCompartment, nCompartments)
+        dXdt = ComputedXdt(Props, nu, frozenReaction, nCompartments)
 
         # check if any states change in this step
-        Dtau, correctInteger, DoDisc, DoCont, discCompartment, contCompartment, NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt = UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
+        Dtau, correctInteger, DoDisc, frozenReaction, NewDoDisc, NewfrozenReaction, newlyDiscCompIndex = UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, frozenReaction, compartInNu, nCompartments,nRates)
 
-        Xcurr = [X[i][iters] + Dtau * (dXdt[i] * DoCont[i]) for i in range(len(X))]
+        # Only apply the forward Euler step if the compartment is continuous.
+        Xcurr = SystemState([CompartmentValue(X[i][iters] + (0 if DoDisc[i] else Dtau * dXdt[i])) for i in range(nCompartments)])
 
         # Update the discrete compartments, if a state has just become discrete
-        OriginalDoCont = DoCont[:]
+        OriginalDoDisc = DoDisc[:]
         if correctInteger == 1:
-            NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
-            contCompartment = NewcontCompartment[:]
-            discCompartment = NewdiscCompartment[:]
-            DoCont = NewDoCont[:]
+            NewDoDisc, NewfrozenReaction = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, EnforceDo, frozenReaction, compartInNu, nCompartments,nRates)
+            frozenReaction = NewfrozenReaction[:]
             DoDisc = NewDoDisc[:]
 
-
         # Perform the Stochastic Loop
-        stayWhile = True if NNZ(DoCont) != nCompartments else False
+        stayWhile = any(DoDisc)
 
         AbsT = ContT
         DtauContStep = Dtau
-        TimePassed = 0
+        TimePassed = Time(0.0)
 
         firstStayWhileLoop = True
         while stayWhile:
@@ -125,34 +165,34 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
                 Props = rates(Xcurr, AbsT)
 
             integralStep = ComputeIntegralOfFiringTimes(Dtau, Props, rates, Xprev, Xcurr, AbsT)
-            integralOfFiringTimes = ArrayPlusAB(integralOfFiringTimes,ArrayMultiplyAB(integralStep, discCompartment))
+            integralOfFiringTimes = ArrayPlusAB(integralOfFiringTimes,ArrayMultiplyAB(integralStep, frozenReaction))
 
             # If any of the components have just become discrete, we need to update the integralOfFiringTimes and randTimes
             if correctInteger == 1:
                 for ii in range(nCompartments):
-                    if NewDiscCompartmemt==ii and not EnforceDo[ii]:
+                    if newlyDiscCompIndex==ii and not EnforceDo[ii]:
                         for jj in range(nRates):
                             if compartInNu[jj][ii]:
-                                discCompartment[jj] = 1
+                                frozenReaction[jj] = True
                                 integralOfFiringTimes[jj] = 0.0
                                 randTimes[jj] = random.random()
 
             firedReactions = [
-                        (0 > rand - (1 - math.exp(-integral))) * disc
-                        for rand, integral, disc in zip(randTimes, integralOfFiringTimes, discCompartment)
+                        ((0 > (rand - (1 - math.exp(-integral)))) and disc)
+                        for rand, integral, disc in zip(randTimes, integralOfFiringTimes, frozenReaction)
                     ]
-            
-            if NNZ(firedReactions) > 0:
+
+            if any(firedReactions):
                 # Identify which reactions have fired
                 tauArray = ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,Dtau,nRates,integralStep)
 
-                if NNZ(tauArray) > 0:
+                if num_non_zero(tauArray) > 0:
 
                     # Update the discrete compartments
-                    Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoCont, discCompartment)
+                    Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc, frozenReaction)
 
                     iters = iters + 1
-                    for i in range(len(X)):
+                    for i in range(nCompartments):
                         X[i].append(Xcurr[i])
 
                     TauArr.append(AbsT)
@@ -168,41 +208,36 @@ def JumpSwitchFlowSimulator(x0, rates, stoich, t_max, options):
                 stayWhile = False
 
         iters = iters + 1
-        ContT = ContT + DtauContStep
+        ContT = Time(ContT + DtauContStep)
 
         TauArr.append(ContT)
         for i in range(len(X)):
-            X[i].append(X[i][iters - 1] + (DtauContStep - TimePassed) * (dXdt[i] * DoCont[i]))
+            X[i].append(CompartmentValue(X[i][iters - 1] + (0 if DoDisc[i] else (DtauContStep - TimePassed) * dXdt[i])))
 
         if correctInteger == 1:
-            pos = NewDiscCompartmemt
+            pos = newlyDiscCompIndex
             X[pos][iters] = round(X[pos][iters])
 
             for jj in range(nRates):
                 if compartInNu[jj][pos]:
-                    discCompartment[jj] = 1
+                    frozenReaction[jj] = True
                     integralOfFiringTimes[jj] = 0.0
                     randTimes[jj] = random.random()
-            NewDiscCompartmemt = None
+            newlyDiscCompIndex = None
 
-    return X, TauArr
+    return Trajectory((X, TauArr))
 
 def ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,dt,nRates,integralStep):
     tauArray = [0.0] * nRates
     for kk in range(nRates):
         if firedReactions[kk]:
-
-            Integral_t0_ti = (-1.0*(integralOfFiringTimes[kk] - integralStep[kk]))
+            Integral_t0_ti = integralStep[kk] - integralOfFiringTimes[kk]
             Integral = Integral_t0_ti - math.log((1 - randTimes[kk]))
-            tau_val_1 = Integral / (Props[kk])
-
-            tau_val = tau_val_1
-
-            tauArray[kk] = tau_val
+            tauArray[kk] = Integral / Props[kk]
 
     return tauArray
 
-def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoCont,discCompartment):
+def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc,frozenReaction):
     tauArray = [float('inf') if tau == 0.0 else tau for tau in tauArray]
 
     DtauMin = min(tauArray)
@@ -211,12 +246,13 @@ def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates
     TimePassed = TimePassed + DtauMin
     AbsT = AbsT + DtauMin
 
-    Xcurr = [X[i][iters] + nu[pos][i] + DtauMin * (dXdt[i] * OriginalDoCont[i]) for i in range(len(X))]
-    Xprev = [X[i][iters] for i in range(len(X))]
+    nCompartments = len(X)
+    Xcurr = [X[i][iters] + nu[pos][i] + (0 if OriginalDoDisc[i] else DtauMin * dXdt[i]) for i in range(nCompartments)]
+    Xprev = [X[i][iters] for i in range(nCompartments)]
 
-    integralOfFiringTimes = [integral - step*disc for integral, step, disc in zip(integralOfFiringTimes, integralStep, discCompartment)]
+    integralOfFiringTimes = [integral - step*disc for integral, step, disc in zip(integralOfFiringTimes, integralStep, frozenReaction)]
     integralStep = ComputeIntegralOfFiringTimes(DtauMin, Props, rates, Xprev, Xcurr, AbsT)
-    integralOfFiringTimes = [integral + step*disc for integral, step, disc in zip(integralOfFiringTimes, integralStep, discCompartment)]
+    integralOfFiringTimes = [integral + step*disc for integral, step, disc in zip(integralOfFiringTimes, integralStep, frozenReaction)]
 
     integralOfFiringTimes[pos] = 0.0
     randTimes[pos] = random.random()
@@ -225,76 +261,45 @@ def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates
 
 def ComputeIntegralOfFiringTimes(Dtau, Props, rates, Xprev, Xcurr, AbsT):
     # Integrate the cumulative wait times using trapezoid method
-    integralStep = [Dtau * 0.5 * (Props[i] + rates(Xcurr, AbsT + Dtau)[i]) for i in range(len(Props))]
+    integralStep = [Dtau * 0.5 * (p + r) for p, r in zip(Props, rates(Xcurr, AbsT + Dtau))]
     return integralStep
 
-def ComputedXdt(Xprev, Props, nu, contCompartment, nCompartments):
-    dXdt = [sum(Props[i] * contCompartment[i] * nu[i][j] for i in range(len(Props))) for j in range(len(nu[0]))]
 
-    return dXdt
+def ComputedXdt(
+        Props: List[float],
+        nu: List[List[float]],
+        frozenReaction: List[bool],
+        nCompartments: int) -> List[float]:
+    """
+    Compute the derivative of the state vector at time t for the
+    continuous compartments by summing the contributions from each
+    reaction.
 
-def ORIGINAL_UpdateCompartmentRegime(dt, Xprev, Dtau, Props, nu, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates):
+    Args:
+        Props: A list of the propensities of each reaction.
+        nu: The stoichiometry matrix.
+        frozenReaction: A list of booleans indicating which reactions
+            are frozen.
+        nCompartments: The number of compartments in the system.
+    """
+    return [sum(0 if frozenReaction[i] else Props[i] * nu[i][j]
+                for i in range(len(Props)))
+            for j in range(nCompartments)]
+
+
+def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, EnforceDo, frozenReaction, compartInNu, nCompartments,nRates):
     # check if any states change in this step
-    NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
+    NewDoDisc, NewfrozenReaction = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, EnforceDo, frozenReaction, compartInNu, nCompartments,nRates)
 
     correctInteger = 0
-    NewDiscCompartmemt = [0] * nCompartments
-
-    # Identify if a state has just become discrete
-    
-    if any([((x > (thresh)) and  (x  <= (thresh+1)) and  isCont) for x, isCont, thresh in zip(Xprev,DoCont,SwitchingThreshold)]):
-    # if any([((x > (thresh)) and  (x+Dtau*dxi*isCont  <= (thresh)) and  isCont) for x, isCont, thresh, dxi in zip(Xprev,DoCont,SwitchingThreshold,dXdt)]):
-        # Identify which compartment has just switched
-        pos = None
-        for i, (x, isCont, thresh) in enumerate(zip(Xprev,DoCont,SwitchingThreshold)):
-            if (x <= (thresh+1) and  isCont):
-                pos = i
-                break
-
-        if pos is not None:
-            # Here, we identify the time to the next integer
-            dXdt = [sum(Props[i] * contCompartment[i] * nu[i][j] for i in range(len(Props))) for j in range(len(nu[0]))]
-
-            Xprev_pos = Xprev[pos]
-            rounded_Xprev_pos = math.floor(Xprev_pos)
-            dXdt_pos = dXdt[pos]
-
-            Dtau = min(dt, abs((rounded_Xprev_pos - Xprev_pos) / dXdt_pos))
-
-            # If the time to the next integer is less than the time step, we need to move the mesh
-            if Dtau < dt:
-                NewDiscCompartmemt[pos] = 1
-                correctInteger = 1
-        else:
-            contCompartment = NewcontCompartment
-            discCompartment = NewdiscCompartment
-            DoCont = NewDoCont
-            DoDisc = NewDoDisc
-            # correctInteer = 1
-    else:
-        contCompartment = NewcontCompartment
-        discCompartment = NewdiscCompartment
-        DoCont = NewDoCont
-        DoDisc = NewDoDisc
-
-    return Dtau, correctInteger, DoDisc, DoCont, discCompartment, contCompartment, NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt
-
-def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates):
-    # check if any states change in this step
-    NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment = IsDiscrete(Xprev, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments,nRates)
-
-    correctInteger = 0
-    NewDiscCompartmemt = None
-    x_step = [Dtau*dxi*isCont for dxi, isCont in zip(dXdt, DoCont)]
-    if any([( (x+dxi  <= (thresh)) and  isCont==1) for x, isCont, thresh, dxi in zip(Xprev,DoCont,SwitchingThreshold,x_step)]):
+    newlyDiscCompIndex = None
+    x_step = [( 0 if isDisc else Dtau*dxi ) for dxi, isDisc in zip(dXdt, DoDisc)]
+    if any([( (x+dxi  <= thresh) and  (not isDisc)) for x, isDisc, thresh, dxi in zip(Xprev,DoDisc,SwitchingThreshold,x_step)]):
         # Identify which compartment has just switched
         pos = 0
         possible_Dtau = [dt]
-        for i, (x, isCont, thresh, dxi) in enumerate(zip(Xprev,DoCont,SwitchingThreshold, x_step)):
-            # if (x > (thresh) and  isCont==1 and  (x+dxi  <= (thresh)) ):
-            if (isCont==1 and  (x+dxi  <= (thresh)) ):
-                # print('pos = ', i)
-                # print('x = ', x)
+        for i, (x, isDisc, thresh, dxi) in enumerate(zip(Xprev,DoDisc,SwitchingThreshold, x_step)):
+            if ((not isDisc) and  (x+dxi  <= thresh)):
 
                 Xprev_pos = Xprev[i]
                 rounded_Xprev_pos = math.ceil(Xprev_pos+x_step[i])
@@ -309,53 +314,44 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
             if pos > 0:
                     pos = pos - 1
                     # update the discrete compartment that has just switched
-                    NewDiscCompartmemt = pos
+                    newlyDiscCompIndex = pos
                     correctInteger = 1
         else:
-            contCompartment = NewcontCompartment
-            discCompartment = NewdiscCompartment
-            DoCont = NewDoCont
+            frozenReaction = NewfrozenReaction
             DoDisc = NewDoDisc
             # correctInteer = 1
     else:
-        contCompartment = NewcontCompartment
-        discCompartment = NewdiscCompartment
-        DoCont = NewDoCont
+        frozenReaction = NewfrozenReaction
         DoDisc = NewDoDisc
 
-    return Dtau, correctInteger, DoDisc, DoCont, discCompartment, contCompartment, NewDoDisc, NewDoCont, NewdiscCompartment, NewcontCompartment, NewDiscCompartmemt
+    return Dtau, correctInteger, DoDisc, frozenReaction, NewDoDisc, NewfrozenReaction, newlyDiscCompIndex
 
-def IsDiscrete(X, SwitchingThreshold, DoDisc, DoCont, EnforceDo, discCompartment, contCompartment, compartInNu, nCompartments, nRates):
+def IsDiscrete(X, SwitchingThreshold, DoDisc, EnforceDo, frozenReaction, compartInNu, nCompartments, nRates):
     # Check if any compartments should be switched to continuous
-    DoDiscTmp = [(1 if x <= threshold else 0) for x, threshold in zip(X, SwitchingThreshold)]
-    DoContTmp = [1 - x for x in DoDiscTmp]
+    DoDiscTmp = [x <= threshold for x, threshold in zip(X, SwitchingThreshold)]
 
     for idx, x in enumerate(EnforceDo):
         if x == 1:
             DoDiscTmp[idx] = DoDisc[idx]
-            DoContTmp[idx] = DoCont[idx]
 
     are_equal = [DoDiscTmp[idx] == DoDisc[idx] for idx in range(nCompartments)]
 
-    if sum(are_equal) == nCompartments:
-        discCompartmentTmp = discCompartment.copy()
-        contCompartmentTmp = contCompartment.copy()
+    if all(are_equal):
+        frozenReactionTmp = frozenReaction.copy()
     else:
-        discCompartmentTmp = [0] * nRates
+        frozenReactionTmp = [False] * nRates
 
         for idx in range(nCompartments):
-            for compartIdx in range(nRates):
-                if EnforceDo[idx] == 0:
-                    if DoDiscTmp[idx] == 1 and compartInNu[compartIdx][idx] == 1:
-                        discCompartmentTmp[compartIdx] = 1
+            for reactionIdx in range(nRates):
+                if not EnforceDo[idx]:
+                    if DoDiscTmp[idx] and compartInNu[reactionIdx][idx] == 1:
+                        frozenReactionTmp[reactionIdx] = True
                 else:
-                    if DoDisc[idx] == 1 and compartInNu[compartIdx][idx] == 1:
-                        discCompartmentTmp[compartIdx] = 1
-
-    contCompartmentTmp = [1 - x for x in discCompartmentTmp]
+                    if DoDisc[idx] and compartInNu[reactionIdx][idx] == 1:
+                        frozenReactionTmp[reactionIdx] = True
 
 
-    return DoDiscTmp, DoContTmp, discCompartmentTmp, contCompartmentTmp
+    return DoDiscTmp, frozenReactionTmp
 
 # these are helper functions to make it readable
 def ArraySubtractAB(ArrayA, ArrayB):
@@ -370,10 +366,10 @@ def MatrixSubtractAB(MatrixA,MatrixB):
 def MatrixPlusAB(MatrixA,MatrixB):
     APlusB = [[a + b for a, b in zip(row1, row2)] for row1, row2 in zip(MatrixA, MatrixB)]
     return APlusB
-def NNZ(Array):
-    # NumberOfNonZeros
-    non_zero_count = sum(1 for element in Array if element != 0)
-    return non_zero_count
+
+def num_non_zero(array: Union[List[float], List[int], List[Time]]) -> int:
+    return sum(1 for element in array if element != 0)
+
 def MatrixDOTArray(Matrix,Array):
     result = [sum(row[i] * Array[i] for i in range(len(Array))) for row in Matrix]
     return result

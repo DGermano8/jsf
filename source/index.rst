@@ -3,7 +3,6 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-
 Welcome to the Jump-Switch-Flow Documentation!
 ==============================================
 
@@ -13,8 +12,7 @@ Welcome to the Jump-Switch-Flow Documentation!
 
 .. contents::
    :local:
-   :depth: 2
-
+   :depth: 1
 
 Overview
 --------
@@ -28,18 +26,18 @@ ignored at high population sizes.
 Method
 ------
 
-To couple both the stochastic (Jumping) and deterministic (Flowing) 
-compartments, we model each compartment as to where they are in state space. 
+To couple both the stochastic (Jumping) and deterministic (Flowing)
+compartments, we model each compartment as to where they are in state space.
 
 Consider a compartmental model where :math:`V_{i}(t)` represents the value
-of the :math:`i` th compartment at time :math:`t`. In a differential equation based 
-model, the :math:`V_{i}` could take values in :math:`\mathbb{R}_{\geq 0}`, and 
-in a CTMC model they might take values in :math:`\mathbb{Z}_{\geq 0}`. 
+of the :math:`i` th compartment at time :math:`t`. In a differential equation based
+model, the :math:`V_{i}` could take values in :math:`\mathbb{R}_{\geq 0}`, and
+in a CTMC model they might take values in :math:`\mathbb{Z}_{\geq 0}`.
 
-To couple both the stochastic (Jumping) and deterministic (Flowing) 
-compartments in Jump-Switch-Flow, we model each compartment as taking 
-values in :math:`\mathcal{V}_{\Omega} = \{0,1,\ldots,\Omega\} \cup (\Omega,\infty)`. 
-The value :math:`\Omega` is the value at which the system transitions from discrete 
+To couple both the stochastic (Jumping) and deterministic (Flowing)
+compartments in Jump-Switch-Flow, we model each compartment as taking
+values in :math:`\mathcal{V}_{\Omega} = \{0,1,\ldots,\Omega\} \cup (\Omega,\infty)`.
+The value :math:`\Omega` is the value at which the system transitions from discrete
 to continuous dynamics. If a compartment :math:`V_{i}` has a value in
 :math:`\{0,1,\ldots,\Omega\}`, we describe that compartment as
 `discrete` (or `Jumping`), and if it has a value in
@@ -62,7 +60,7 @@ continual change of value.
 Jump events occur following an inhomogeneous arrival process. Reaction
 :math:`j` occurs at a rate :math:`\lambda_{j}`, which may depend upon the
 values of all the reactants of that reaction. The net rate of
-reactions is :math:`\sum_{j \in \mathcal{S}} \lambda_{j}`. 
+reactions is :math:`\sum_{j \in \mathcal{S}} \lambda_{j}`.
 For a detailed description of how to sample these reaction times, see the description
 of time-varying Poisson arrival processes by `Klein and Roberts <https://journals.sagepub.com/doi/10.1177/003754978404300406>`_.
 
@@ -86,7 +84,7 @@ equations.
 
 Between jump events, the discrete variables remain constant and the
 change of continuous variables follows a system of differential
-equations: :math:`dV_i/dt = \sum_{j\in \mathcal{S}^{c}} \lambda_j \Delta_{i,j}`, 
+equations: :math:`dV_i/dt = \sum_{j\in \mathcal{S}^{c}} \lambda_j \Delta_{i,j}`,
 where :math:`\Delta_{i,j}` is the change in the amount of
 variable :math:`i` during a reaction :math:`j`.
 
@@ -215,6 +213,34 @@ point it follows the differential equations.
    :width: 700
    :align: center
    :alt: SIS epidemic example
+
+Types
+-----
+
+The ``jsf.types`` module provides some key types for this package.
+There is nothing fancy here; they are just used to make the type hints
+more informative and help to leverage ``mypy``.
+
+- ``CompartmentValue``: the value of a compartment, this is a ``float``.
+- ``SystemState``: the state of the system, this is a list of ``CompartmentValue`` s.
+- ``Time``: the time, this is a float.
+
+Recall you can use the following to type check the code:
+
+.. code-block:: sh
+
+    mypy jsf tests
+
+
+API
+---
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Modules
+
+   jsf
+   exact
 
 Installation
 ------------

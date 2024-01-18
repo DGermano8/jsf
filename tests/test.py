@@ -1,6 +1,8 @@
 import unittest
 import random
 import math
+import time
+
 import jsf
 
 random.seed(1234)
@@ -37,14 +39,44 @@ class AnEdgeCase(unittest.TestCase):
             "SwitchingThreshold": [self.threshold, self.threshold],
         }
 
-    def test_values(self):
+    def check_trajectory_is_valid(self, trajectory):
+        # Check that the trajectory is valid in the sense that all the
+        # CompartmentValues are integers if they are less than or
+        # equal to the threshold and are not integers if they are
+        # greater than the threshold (excluding the case of
+        # threshold+n which can happen).
+        comp_valss = trajectory[0]
+        for comp_vals in comp_valss:
+            for comp_val in comp_vals:
+                if comp_val <= self.threshold:
+                    self.assertTrue(abs(comp_val - round(comp_val)) < 1e-6)
+                else:
+                    self.assertTrue(abs(comp_val - round(comp_val)) > 1e-6)
+
+    def test_values_op(self):
         try:
             self.sim = jsf.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="operator-splitting")
+            self.check_trajectory_is_valid(self.sim)
+        except ZeroDivisionError:
+            self.assertTrue(False)
+
+    def test_values_exact(self):
+        try:
+            self.sim = jsf.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="exact")
+            self.check_trajectory_is_valid(self.sim)
         except ZeroDivisionError:
             self.assertTrue(False)
 
 
 class TestBirthDeathExample(unittest.TestCase):
+    """
+    Test birth-death simulations against the results of the mean-field
+    approximation.
+
+    This checks both the exact implementation and the
+    operator-splitting implementation.
+    """
+
     def setUp(self):
         self.num_reps = 500
 
@@ -65,6 +97,9 @@ class TestBirthDeathExample(unittest.TestCase):
         nu_reactants = [[1], [1]]
         nu_products = [[2], [0]]
 
+        # In the nu-matrix each row is a reaction and each column
+        # describes the number items of that species used in the
+        # reaction.
         stoich = {
             "nu": [
                 [a - b for a, b in zip(r1, r2)]
@@ -81,16 +116,35 @@ class TestBirthDeathExample(unittest.TestCase):
             "SwitchingThreshold": [self.threshold],
         }
 
+        op_split_start_time = time.time()
         self.sims = [
             jsf.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="operator-splitting")
             for x0 in self.x0s
         ]
+        op_split_end_time = time.time()
+        # Store the time taken to run the operator splitting sampler
+        # so that we can compare it to the exact sampler. Since the
+        # exact sampler does not use the operator splitting algorithm
+        # it should be slower.
+        self.op_split_time = op_split_end_time - op_split_start_time
+
         self.x_timeseriess = [sim[0][0] for sim in self.sims]
+
+        exact_start_time = time.time()
+        self.sims_exact = [
+            jsf.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="exact")
+            for x0 in self.x0s
+        ]
+        exact_end_time = time.time()
+        self.exact_time = exact_end_time - exact_start_time
+
+        self.x_timeseriess_exact = [sim[0][0] for sim in self.sims_exact]
 
     def test_output_shape(self):
         self.assertTrue(len(self.sims) == self.num_reps)
+        self.assertTrue(len(self.sims_exact) == self.num_reps)
 
-    def test_mean_field_soln(self):
+    def test_op_split_mean_field_soln(self):
         # import pdb; pdb.set_trace()
         self.assertTrue(all([foo[0] == self.x0 for foo in self.x_timeseriess]))
         final_x = [xs[-1] for xs in self.x_timeseriess]
@@ -103,11 +157,32 @@ class TestBirthDeathExample(unittest.TestCase):
         thry_mean_final_x = self.mean_field_soln(self.t_max)
         self.assertTrue(abs(mean_final_x - thry_mean_final_x) < 2 * std_err_final_x)
 
+    def test_exact_mean_field_soln(self):
+        self.assertTrue(all([foo[0] == self.x0 for foo in self.x_timeseriess_exact]))
+        final_x = [xs[-1] for xs in self.x_timeseriess_exact]
+        mean_final_x = sum(final_x) / len(final_x)
+        # remember to use the unbiased estimator of the variance
+        std_final_x = math.sqrt(
+            sum([(x - mean_final_x) ** 2 for x in final_x]) / (len(final_x) - 1)
+        )
+        std_err_final_x = std_final_x / math.sqrt(self.num_reps)
+        thry_mean_final_x = self.mean_field_soln(self.t_max)
+        self.assertTrue(abs(mean_final_x - thry_mean_final_x) < 2 * std_err_final_x)
 
-class FartTestSISExample(unittest.TestCase):
-    # Set up the simulation
+    def test_exact_slower_than_op_split(self):
+        # Check that the exact sampler is slower than the operator
+        # splitting sampler as expected.
+        self.assertTrue(self.exact_time > self.op_split_time)
+
+
+class TestSISExample(unittest.TestCase):
 
     def setUp(self):
+        # Because this is a stochastic process we need to set the
+        # random seed so that we get reproducible results. It is not
+        # sufficient to set the seed at the start of the test module
+        # because we want to be able to run the tests in any order.
+        random.seed(1234)
         x0 = [1000 - 3, 3]
 
         def rates(x, time):
@@ -115,6 +190,9 @@ class FartTestSISExample(unittest.TestCase):
             i = x[1]
             return [2e-3 * s * i, 1.0 * i]
 
+        # In the nu-matrix each row is a reaction and each column
+        # describes the number items of that species used in the
+        # reaction.
         nu_reactants = [[1, 1], [0, 1]]
         nu_products = [[0, 2], [1, 0]]
         stoich = {
@@ -132,18 +210,24 @@ class FartTestSISExample(unittest.TestCase):
             "dt": 0.1,
             "SwitchingThreshold": [self.threshold, self.threshold],
         }
-        self.sim = jsf.JumpSwitchFlowSimulator(x0, rates, stoich, 10.0, my_opts)
 
-        self.susceptible_timeseries = self.sim[0][0]
-        self.infected_timeseries = self.sim[0][1]
+        # Using the operator splitting sampler
+        self.sim_op = jsf.JumpSwitchFlowSimulator(x0, rates, stoich, 10.0, my_opts)
+        self.susceptible_timeseries_op = self.sim_op[0][0]
+        self.infected_timeseries_op = self.sim_op[0][1]
 
-    def test_infected_timeseries(self):
+        # Using the exact sampler
+        self.sim_exact = jsf.jsf(x0, rates, stoich, 10.0, config=my_opts, method="exact")
+        self.susceptible_timeseries_exact = self.sim_exact[0][0]
+        self.infected_timeseries_exact = self.sim_exact[0][1]
+
+    def test_infected_timeseries_op(self):
         # extract the elements from the infected timeseries that are
         # less than or equal to the threshold and check that they all
         # take values that are within 1e-6 of an integer. This checks
         # that the process if
 
-        small_i_values = [i for i in self.infected_timeseries if i <= self.threshold]
+        small_i_values = [i for i in self.infected_timeseries_op if i <= self.threshold]
         for i in small_i_values:
             self.assertTrue(abs(i - round(i)) < 1e-6)
 
@@ -152,7 +236,18 @@ class FartTestSISExample(unittest.TestCase):
         # they are not within 1e-6 of an integer. This checks that the
         # process is evolving continuously.
 
-        large_i_values = [i for i in self.infected_timeseries if i > self.threshold + 1]
+        large_i_values = [i for i in self.infected_timeseries_op if i > self.threshold + 1]
+        for i in large_i_values:
+            self.assertTrue(abs(i - round(i)) > 1e-6)
+
+
+    def test_infected_timeseries_exact(self):
+
+        small_i_values = [i for i in self.infected_timeseries_exact if i <= self.threshold]
+        for i in small_i_values:
+            self.assertTrue(abs(i - round(i)) < 1e-6)
+
+        large_i_values = [i for i in self.infected_timeseries_exact if i > self.threshold + 1]
         for i in large_i_values:
             self.assertTrue(abs(i - round(i)) > 1e-6)
 
