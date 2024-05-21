@@ -304,7 +304,7 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
                 Xprev_pos = Xprev[i]
                 rounded_Xprev_pos = math.ceil(Xprev_pos+x_step[i])
                 dXdt_pos = dXdt[i]
-
+                
                 possible_Dtau.append(abs((rounded_Xprev_pos - Xprev_pos) / dXdt_pos))
 
         if len(possible_Dtau) > 1:

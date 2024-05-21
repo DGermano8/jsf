@@ -23,70 +23,95 @@ process that can be used to represent compartmental models where
 stochastic effects are important at low population sizes but can be
 ignored at high population sizes.
 
-Method
-------
+JSF Mathematical Framework
+--------------------------
 
 To couple both the stochastic (Jumping) and deterministic (Flowing)
 compartments, we model each compartment as to where they are in state space.
 
-Consider a compartmental model where :math:`V_{i}(t)` represents the value
-of the :math:`i` th compartment at time :math:`t`. In a differential equation based
-model, the :math:`V_{i}` could take values in :math:`\mathbb{R}_{\geq 0}`, and
-in a CTMC model they might take values in :math:`\mathbb{Z}_{\geq 0}`.
+Consider a compartmental model with :math:`n` compartments :math:`\vec{V} = \left\{ V_i\right\}_{i=1}^n`, 
+where :math:`V_{i}(t)` represents the value of the :math:`i` th compartment at time :math:`t`. 
+For example, :math:`V_i` could be the number of people infected with a pathogen, or the copy 
+number of a molecule in a cell. The state variables :math:`V_i` may take values from different 
+domains depending upon the resolution needed for the model. For example, in an ODE, :math:`\vec{V}` 
+will have real values and in a CTMC :math:`\vec{V}`  might have integer values.
 
-To couple both the stochastic (Jumping) and deterministic (Flowing)
-compartments in Jump-Switch-Flow, we model each compartment as taking
-values in :math:`\mathcal{V}_{\Omega} = \{0,1,\ldots,\Omega\} \cup (\Omega,\infty)`.
-The value :math:`\Omega` is the value at which the system transitions from discrete
-to continuous dynamics. If a compartment :math:`V_{i}` has a value in
-:math:`\{0,1,\ldots,\Omega\}`, we describe that compartment as
-`discrete` (or `Jumping`), and if it has a value in
-:math:`(\Omega,\infty)`, we describe it as `continuous` (or
-`Flowing`).
+Typically, discrete values are used to represent small populations, while larger populations 
+will be represented with a continuum. To accommodate both scales, we model the domain of :math:`V_{i}`
+as :math:`\mathcal{V}_{\Omega_i}=\{0,1,\ldots,\Omega_{i}\}\cup(\Omega_{i},\infty)`. The switching 
+threshold parameter, :math:`\Omega_i\in \mathbb{Z}_{\geq 0}`, is where the :math:`i` th compartment 
+transitions from discrete to continuous dynamics. If a compartment :math:`V_{i}` has a value in 
+:math:`\{0,1,\ldots,\Omega_{i}\}`, we call it "discrete" (or "jumping"), and if it has a value in 
+:math:`(\Omega_{i},\infty)`, we call it "continuous" (or "flowing"). While the switching threshold 
+can be compartment specific, for ease of exposition, we will only consider a single threshold shared 
+between all compartments :math:`\Omega = \Omega_i`. At any moment in time let us assume :math:`q` of the 
+:math:`n` compartments are flowing. We use the notation :math:`\vec{V}_F = \left\{ V_i: V_i>\Omega \right\} \in (\Omega,\infty)^q`
+and :math:`\vec{V}_J = \left\{ V_i: V_i\leq \Omega \right\} \in \left\{0, 1, \ldots, \Omega \right\}^{(n-q)}` 
+to represent the compartments in each of the flowing and jumping states, respectively. 
 
-Changes to the :math:`V_i` in these models are defined by a set of
-`reactions`. Each reaction consists of three things: the rate it
-occurs, the reactants consumed it, and the products generated. For a
-given reaction, we refer to the difference in the amount produced, and
-the mount consumed as the `flow`.
-
-The set :math:`\mathcal{S}` consists of the reactions which have at least
-one discrete reactant or product. We refer to the occurrence of these
-reactions as a `jumps` because they involve one of the discrete
-variables values changing discretely. The reactions not in
-:math:`\mathcal{S}` are called `flows`` because they represent the
-continual change of value.
-
-Jump events occur following an inhomogeneous arrival process. Reaction
-:math:`j` occurs at a rate :math:`\lambda_{j}`, which may depend upon the
-values of all the reactants of that reaction. The net rate of
-reactions is :math:`\sum_{j \in \mathcal{S}} \lambda_{j}`.
-For a detailed description of how to sample these reaction times, see the description
-of time-varying Poisson arrival processes by `Klein and Roberts <https://journals.sagepub.com/doi/10.1177/003754978404300406>`_.
-
-For each possible reaction in the system, :math:`k`, we include
-a new variable, :math:`J_{k}(t)`, which counts down the time until that
-reaction will occur. At time :math:`t_0` the value of :math:`J_{k}(t_0)` is
-initialised with a uniform random variable,
-:math:`u_{k}\sim\text{Uniform(0,1)}`. The remaining time until the
-reaction fires then decreases as described by the following equation:
+The dynamics of each compartment :math:`V_i` are described by a set of :math:`m` "reactions" 
+:math:`\mathcal{R} = \left\{\mathcal{R}_k \right\}_{k=1}^m`. Each reaction :math:`\mathcal{R}_k`
+is defined by two properties: the rate (per unit time) at which it occurs, :math:`\lambda_{k}`, which may be 
+(and usually is) a function of the state :math:`\vec{V}`; and the effect on the state, i.e. the change :math:`\eta_{ik}` 
+to the size of compartment :math:`V_i` when reaction :math:`\mathcal{R}_k` occurs. As a matrix, 
+:math:`\eta\in \mathbb{Z}^{n,m}` is referred to as the "stoichiometric matrix". For ODE models, these 
+reactions occur continuously and are written in the form
 
 .. math::
-  J_{k}(t)=u_{k} - \left( 1 - \exp\left\{- \int_{t_{0}}^{t} \lambda_{k} ds \right\} \right),
+  \frac{\mathrm{d}\vec{V}}{\mathrm{d}t} = \eta \vec{\lambda}(\vec{V}),
 
-where :math:`\lambda_{k}` is the rate of the :math:`k` th reaction type. Since
-the reaction rates are continuous, this is a strictly decreasing
-function of time. Once one of the :math:`J_k` reaches zero, that reaction
-occurs and all of the :math:`J_i` are rest. Note that the rate of
-reactions can change continuously through time. This is because the
-rate may depend on other variables that are governed by differential
-equations.
+while for CTMC models, reactions in the system :math:`\mathcal{R}` occur as discrete events.
+In the later case, each reaction :math:`\mathcal{R}_k` has a separate propensity described by 
+:math:`\lambda_k(\vec{V})`, this propensity remains constant between events but when an event 
+:math:`\mathcal{R}_k` occurs, there is a change in :math:`\vec{V}` (as specified by the elements of 
+:math:`\eta_{\cdot k}`) and therefore in :math:`\vec{\lambda}(\vec{V})`.
 
-Between jump events, the discrete variables remain constant and the
-change of continuous variables follows a system of differential
-equations: :math:`dV_i/dt = \sum_{j\in \mathcal{S}^{c}} \lambda_j \Delta_{i,j}`,
-where :math:`\Delta_{i,j}` is the change in the amount of
-variable :math:`i` during a reaction :math:`j`.
+We define the subset of reactions :math:`\mathcal{S}\subseteq \mathcal{R}` to contain those treated 
+as stochastic events. We define :math:`\mathcal{S}`, which we use throughout this manuscript, captures 
+a larger set of reactions; :math:`\mathcal{S} = \left\{\mathcal{R}_k:\exists i \text{ s.t. } V_i\in\vec{V}_J \text{ and }  \left(\eta_{ik}\neq 0 \text{ or } \partial_{V_i}\lambda_k \neq 0\right)   \right\}`.
+In this definition, a reaction is included in :math:`\mathcal{S}` if either (1) it causes a change in 
+jumping (discrete) populations \textit{or} (2) it is influenced by a discrete population (perhaps as reactants for example). 
+
+
+Reactions in :math:`\mathcal{S}` are simulated using stochastically sampled times similar to CTMC models. 
+It is important to note that, unlike time homogeneous CTMC models, the propensities are not constant 
+because the state :math:`\vec{V}` (and therefore :math:`\vec{\lambda}`) are continuously varying.
+When any reaction :math:`\mathcal{R}_k\in\mathcal{S}` occurs, we say the system has "jumped" and an 
+instantaneous change of :math:`\eta_{ik}` for each compartment :math:`V_i` occurs (irrespective of whether
+:math:`V_i\in\vec{V}_J` or :math:`V_i\in\vec{V}_F` to ensure mass conservation is observed). We will refer 
+therefore to reactions in :math:`\mathcal{S}` as "jumps". The reactions in :math:`\mathcal{S}'=\mathcal{R}\setminus \mathcal{S}`
+are not stochastic, we call these "flows" because they represent the continual change of value of the 
+relevant compartments, all of which are continuous by definition of :math:`\mathcal{S}'`.
+At any moment in time, we denote :math:`|\mathcal{S}'| = p = m - |\mathcal{S}|` to be the number of reactions
+which are flowing.
+
+Finally, the hybrid model that we propose is capable of "switching". Switch events are defined as a 
+compartment between :math:`\vec{V}_F` and :math:`\vec{V}_J`. These events occur when a compartment's 
+value crosses the switching threshold :math:`\Omega`. Importantly, switch events can change 
+:math:`\mathcal{S}` and are paradigm defining events which should occur infrequently compared to
+jumps (frequent) and flows (continuous).
+
+Due to the way that :math:`\mathcal{R}` is partitioned, it is possible to order the rows and columns of :math:`\eta` at 
+any moment into the upper-triangular block form
+
+.. math::
+   \eta = \left(\begin{array}{c|c}
+   \eta_{\mathcal{S}'} & \bar{\eta}_{\mathcal{S}} \\ \hline
+   0 & \eta_{\mathcal{S}} \end{array}\right),
+
+where :math:`\eta_{\mathcal{S}'} \in \mathbb{Z}^{q\times p}`, :math:`\eta_{\mathcal{S}} \in \mathbb{Z}^{(n-q)\times (m-p)}`
+and :math:`\bar{\eta}_{\mathcal{S}} \in \mathbb{Z}^{q\times (m-p)}` refer to stoichiometric coefficients for changes in flowing 
+compartments under flows, jumping compartments under jumps, and flowing compartments under jumps, respectively. Written 
+as a system of equations analogous to (\ref{ODEmodels}), the hybrid JSF model we propose formally takes the following form. 
+For any time interval :math:`t_0<t<t_1` between switching events, 
+
+.. math::
+    \frac{\mathrm{d} \vec{V}_F}{\mathrm{d} t} &= \eta_{\mathcal{S}'} \vec{\lambda}_{\mathcal{S}'}(\vec{V}) + \bar{\eta}_{\mathcal{S}} \vec{\Lambda}_{\mathcal{S}}(\vec{V}),\\
+    \vec{V}_J(t) &= \vec{V}_J(t_0) + \eta_{\mathcal{S}} \int_{t_0}^t  \vec{\Lambda}_{\mathcal{S}}(\vec{V}) \ \mathrm{d} s,
+
+where :math:`\vec{\lambda}_{\mathcal{S}'}\in\mathbb{R}^p` are the reaction rates of flows and :math:`\vec{\Lambda}_{\mathcal{S}}`
+is a stochastic vector of :math:`m-p` delta-function spike trains that are derived from the realisations of :math:`m-p` 
+different jumps sampled at rates which are dependent on the dynamic changes in the propensities :math:`\vec{\lambda}_{\mathcal{S}}\in\mathbb{R}^{m-p}` for these jumps 
 
 The below figure shows how it is
 possible for a variable to `switch` between flowing and jumping
@@ -96,22 +121,65 @@ variable jumps from :math:`\Omega` to :math:`\Omega+1` it switches to flowing
 and we consider it to be a continuous variable.
 
 .. image:: _static/compartment_switching_depiction.png
+   :width: 500
+   :align: center
+   :alt: compartment_switching_depiction
+
+Lotka-Volterra preditor-prey model example
+------------------------------------------
+
+As a simple example for how JSF can be used to capture both stochastic and deterministic
+dynamics, we consider the classic Lotka-Volterra preditor-prey model. 
+In this model, individuals are either prey (:math:`V_1`) or preditors (:math:`V_2`).
+This model is famous for being susceptible to Atto-fox problem, where the deterministic description
+of the model allows for states to become infeasibly small, where the compartment would have otherwise had gone 
+extinct. However, we will see that the JSF process can capture the stochastic effects of the model and permit 
+the system to exhibit both the typical coexistence of the two species and the extinction of one of the species.
+
+The model is described as the following way: the prey reproduce at a constant rate and are eaten by preditors at a rate proportional
+to the number of preditors. The preditors die at a constant rate and are reproduced at 
+a rate proportional to the number of prey they eat. Mathematically, the model is given by:
+
+.. math::
+   \frac{\mathrm{d} V_1}{\mathrm{d} t} &= \alpha V_1 - \beta V_1 V_2,\\
+   \frac{\mathrm{d} V_2}{\mathrm{d} t} &=  \beta V_1 V_2 - \gamma V_2.
+
+
+The compartment model diagram for this preditor-prey model is shown below.
+
+.. image:: _static/preditorPreyModel.png
+   :width: 400
+   :align: center
+   :alt: preditorPreyModel
+
+
+Written as a JSF model, the stoichiometric matrices for the preditor-prey model is given by:
+
+.. image:: _static/JSF_PredPrey.png
+   :width: 500
+   :align: center
+   :alt: JSF_PredPrey
+
+
+We can simulate this model using the JSF process. In doing so, we can see how the model behaves
+as both a stochastic and deterministic process to obtain both the limit cycle and absorbing state behaviour, 
+as shown in the figure below.
+
+.. image:: _static/PP_Behaviour.png
    :width: 600
    :align: center
-   :alt: SIS epidemic example
+   :alt: PP_Behaviour
+
 
 Epidemic simulation example
 ---------------------------
 
-As a simple example, consider the SIS epidemic model. In this model,
-individuals are either susceptible (S) or infected (I). Susceptible
-individuals become infected at a rate proportional to the number of
-infected individuals, and infected individuals recover at a constant
-rate.
+As a simple example, consider the SIS epidemic model. In this model, individuals are either susceptible 
+(S) or infected (I). Susceptible individuals become infected at a rate proportional to the number of 
+infected individuals, and infected individuals recover at a constant rate.
 
-We can simulate this model using the JSF process. The only package
-that is needed is `jsf`, but we will import a few others to help us
-visualise the results.
+We can simulate this model using the JSF process. The only package that is needed is jsf, but we will 
+import a few others to help us visualise the results.
 
 .. code-block:: python
 
@@ -120,6 +188,7 @@ visualise the results.
    import random
    import jsf
    random.seed(7)
+
 
 Defining the SIS model
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -303,12 +372,12 @@ checking, respectively. You can run them with the following commands.
    black jsf
    mypy jsf
 
-Building the documentation
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. Building the documentation
+.. ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code-block:: sh
+.. .. code-block:: sh
 
-   make html
-   cp build/html <my/website>
+..    make html
+..    cp build/html <my/website>
 
 ..  LocalWords:  JSF
