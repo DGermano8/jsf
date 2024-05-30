@@ -119,8 +119,6 @@ def JumpSwitchFlowSimulator(
     Xprev = x0
     Xcurr = x0
 
-    print("test")
-
     # The `newlyDiscCompIndex` variable is used to track which
     # compartment has recently switched to being discrete. It was
     # previously called NewDiscCompartmemt, not to be confused with
