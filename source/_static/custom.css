@@ -3,16 +3,25 @@ body {
     text-align: justify;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 14px;
-    line-height: 1.428571429;
+    line-height: 1.5;
     color: #333333;
-    background-color: rgba(131, 96, 150, 0.5);
+    background-color: rgb(187, 187, 187);
+
+}
+div.bodywrapper{
+    background-color:  rgb(227, 227, 227);
 }
 div.body{
     background-color:  rgb(227, 227, 227);
+    margin: 15px auto; /* reduce margin */
+    width: 90%; /* increase width */
 }
 
 div.body h1{
+    text-align: justify;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    margin: 15px auto; /* reduce margin */
+    width: 90%; /* increase width */
 }
 div.body h2{
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -20,3 +29,16 @@ div.body h2{
 div.body h3{
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
+/* div.sphinxsidebar{
+    background-color:  rgb(131, 96, 150);
+}
+div.documentwrapper{
+    background-color:  rgb(131, 96, 150);
+} */
+/* ul{
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: rgb(131, 96, 150);
+} */

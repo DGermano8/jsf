@@ -7,5 +7,5 @@ setup(
     description='Implementation of the jump-switch-flow simulator',
     author='Domenic Germano',
     author_email='germanod@student.unimelb.edu.au',
-    url='https://github.com/DGermano8/jazzy-shrill-fart',
+    url='https://github.com/DGermano8/jsf',
 )

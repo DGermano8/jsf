@@ -119,6 +119,8 @@ def JumpSwitchFlowSimulator(
     Xprev = x0
     Xcurr = x0
 
+    print("test")
+
     # The `newlyDiscCompIndex` variable is used to track which
     # compartment has recently switched to being discrete. It was
     # previously called NewDiscCompartmemt, not to be confused with
@@ -189,7 +191,18 @@ def JumpSwitchFlowSimulator(
                 if num_non_zero(tauArray) > 0:
 
                     # Update the discrete compartments
-                    Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc, frozenReaction)
+                    Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc, frozenReaction,SwitchingThreshold)
+                    
+                    # Randomly round the values in x1 if necessary to ensure they take
+                    # sensible values and preserve the average behaviour.
+                    for ix, x in enumerate(Xcurr):
+                        if (x < SwitchingThreshold[ix]) and ( abs(x - round(x)) > pow(10, -10 )):
+                            x_floor = math.floor(x)
+                            if random.uniform(0, 1) < (x - x_floor):
+                                Xcurr[ix] = x_floor + 1
+                            else:
+                                Xcurr[ix] = x_floor
+                            stayWhile = False
 
                     iters = iters + 1
                     for i in range(nCompartments):
@@ -237,7 +250,7 @@ def ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,dt,n
 
     return tauArray
 
-def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc,frozenReaction):
+def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc,frozenReaction,SwitchingThreshold):
     tauArray = [float('inf') if tau == 0.0 else tau for tau in tauArray]
 
     DtauMin = min(tauArray)
@@ -293,12 +306,12 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
 
     correctInteger = 0
     newlyDiscCompIndex = None
-    x_step = [( 0 if isDisc else Dtau*dxi ) for dxi, isDisc in zip(dXdt, DoDisc)]
-    if any([( (x+dxi  <= thresh) and  (not isDisc)) for x, isDisc, thresh, dxi in zip(Xprev,DoDisc,SwitchingThreshold,x_step)]):
+    x_step = [( 0 if isDisc else Dtau*dxi ) for dxi, isDisc in zip(dXdt, NewDoDisc)]
+    if any([( (x+dxi  <= thresh) and  (not isDisc)) for x, isDisc, thresh, dxi in zip(Xprev,NewDoDisc,SwitchingThreshold,x_step)]):
         # Identify which compartment has just switched
         pos = 0
         possible_Dtau = [dt]
-        for i, (x, isDisc, thresh, dxi) in enumerate(zip(Xprev,DoDisc,SwitchingThreshold, x_step)):
+        for i, (x, isDisc, thresh, dxi) in enumerate(zip(Xprev,NewDoDisc,SwitchingThreshold, x_step)):
             if ((not isDisc) and  (x+dxi  <= thresh)):
 
                 Xprev_pos = Xprev[i]
