@@ -18,8 +18,19 @@ pip install git+https://github.com/DGermano8/jsf.git
 
 ** Testing
 
+This should always run in under 5 minutes.
+
 #+begin_src sh
   python3 -m unittest discover -s tests
+#+end_src
+
+If you only want to run the tests associated with a single class (or
+even a particular test in that class), you can use the following
+commands:
+
+#+begin_src sh
+  python3 tests/test.py TestBirthDeathExample
+  python3 tests/test.py TestBirthDeathExample.test_output_shape
 #+end_src
 
 ** Documentation

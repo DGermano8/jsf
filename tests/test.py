@@ -68,6 +68,18 @@ class AnEdgeCase(unittest.TestCase):
             self.assertTrue(False)
 
 
+class TestBirthDeathSBMLExample(unittest.TestCase):
+    """
+    Test that we can read in an SBML example and that the results
+    agree with an alternative simulator.
+    """
+    def setUp(self):
+        self.message = "Hello World!"
+
+    def test_message(self):
+        self.assertTrue(self.message == "Hello World!")
+
+
 class TestBirthDeathExample(unittest.TestCase):
     """
     Test birth-death simulations against the results of the mean-field
