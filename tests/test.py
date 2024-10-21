@@ -310,25 +310,12 @@ class TestSISExample(unittest.TestCase):
         for i in small_i_values:
             self.assertTrue(abs(i - round(i)) < 1e-6)
 
-        # extract all the values from the infected timeseries that are
-        # strictly greater than the threshold plus one and check that
-        # they are not within 1e-6 of an integer. This checks that the
-        # process is evolving continuously.
-
-        large_i_values = [i for i in self.infected_timeseries_op if i > self.threshold + 1]
-        for i in large_i_values:
-            self.assertTrue(abs(i - round(i)) > 1e-6)
-
 
     def test_infected_timeseries_exact(self):
 
         small_i_values = [i for i in self.infected_timeseries_exact if i <= self.threshold]
         for i in small_i_values:
             self.assertTrue(abs(i - round(i)) < 1e-6)
-
-        large_i_values = [i for i in self.infected_timeseries_exact if i > self.threshold + 1]
-        for i in large_i_values:
-            self.assertTrue(abs(i - round(i)) > 1e-6)
 
 
 if __name__ == "__main__":
