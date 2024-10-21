@@ -33,6 +33,13 @@ commands:
   python3 tests/test.py TestBirthDeathExample.test_output_shape
 #+end_src
 
+If you are modifying code, you might need to reinstall the package
+before running the tests, here is a one liner to do that.
+
+#+begin_src sh
+  pip install . && python3 tests/test.py TestBirthDeathSBMLExample
+#+end_src
+
 ** Documentation
 
 The documentation is generated with Sphinx and can be found in the
