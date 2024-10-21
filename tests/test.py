@@ -1,7 +1,9 @@
-import unittest
-import random
+import libsbml
 import math
+import os
+import random
 import time
+import unittest
 
 import jsf
 
@@ -80,10 +82,98 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
     ```
     """
     def setUp(self):
-        self.message = "Hello World!"
+        self.num_reps = 500
+        # self.num_reps = 50
+        self.t_max = 6.0
+        self.dt = 0.01
+        self.mean_field_soln = lambda t: self.x0 * math.exp(
+            (self.birth_rate - self.death_rate) * t
+        )
+        self.threshold = 10
+        my_opts = {
+            "EnforceDo": [0],
+            "dt": self.dt,
+            "SwitchingThreshold": [self.threshold],
+        }
 
-    def test_message(self):
-        self.assertTrue(self.message == "Hello World!")
+
+        self.sbml_bd_example_xml = os.path.join(os.path.dirname(__file__), "data", "birth-death-model.xml")
+        reader = libsbml.SBMLReader()
+        self.document = reader.readSBML(self.sbml_bd_example_xml)
+        self.model = self.document.getModel()
+
+        self.compartments = self.model.getListOfCompartments()
+        self.species_list = self.model.getListOfSpecies()
+        self.reactions = self.model.getListOfReactions()
+        self.reaction_details = []
+        for reaction in self.reactions:
+            reactants = [(reactant.getSpecies(), reactant.getStoichiometry()) for reactant in reaction.getListOfReactants()]
+            products = [(product.getSpecies(), product.getStoichiometry()) for product in reaction.getListOfProducts()]
+            self.reaction_details.append({
+                "reaction_id": reaction.getId(),
+                "reactants": reactants,
+                "products": products,
+                "rate_parameter": reaction.getKineticLaw().getParameter(0).getValue(),
+            })
+
+        self.x0 = self.species_list[0].getInitialConcentration()
+        self.x0s = [[self.x0]] * self.num_reps
+
+        self.birth_rate = self.reactions[0].getKineticLaw().getParameter(0).getValue()
+        self.death_rate = self.reactions[1].getKineticLaw().getParameter(0).getValue()
+
+        def _zero_if_missing(x, y):
+            tmp = x[y]
+            return 0 if tmp == [] else tmp[0][-1]
+
+        nu_reactants = [[_zero_if_missing(r,'reactants')] for r in self.reaction_details]
+        nu_products = [[_zero_if_missing(r,'products')] for r in self.reaction_details]
+
+        # TODO We need to clean up parsing the rates out into a function here!
+        def rates(x, t):
+            return [self.birth_rate * x[0], self.death_rate * x[0]]
+
+        # # In the nu-matrix each row is a reaction and each column
+        # # describes the number items of that species used in the
+        # # reaction.
+        stoich = {
+            "nu": [
+                [a - b for a, b in zip(r1, r2)]
+                for r1, r2 in zip(nu_products, nu_reactants)
+            ],
+            "DoDisc": [1],
+            "nuReactant": nu_reactants,
+            "nuProduct": nu_products,
+        }
+
+
+        self.sims_exact = [
+            jsf.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="exact")
+            for x0 in self.x0s
+        ]
+        self.x_timeseriess_exact = [sim[0][0] for sim in self.sims_exact]
+
+    def test_setup(self):
+        self.assertTrue(os.path.exists(self.sbml_bd_example_xml))
+
+    def test_output_shape(self):
+        self.assertTrue(len(self.sims_exact) == self.num_reps)
+
+    def test_exact_mean_field_soln(self):
+        self.assertTrue(all([foo[0] == self.x0 for foo in self.x_timeseriess_exact]))
+        final_x = [xs[-1] for xs in self.x_timeseriess_exact]
+        mean_final_x = sum(final_x) / len(final_x)
+        # remember to use the unbiased estimator of the variance
+        std_final_x = math.sqrt(
+            sum([(x - mean_final_x) ** 2 for x in final_x]) / (len(final_x) - 1)
+        )
+        std_err_final_x = std_final_x / math.sqrt(self.num_reps)
+        thry_mean_final_x = self.mean_field_soln(self.t_max)
+        # Carry out a z-test to check that the mean of the final
+        # values is within two standard errors of the theoretical
+        # mean. This should be a t-test but we are using the normal
+        # approximation because of laziness.
+        self.assertTrue(abs(mean_final_x - thry_mean_final_x) < 2.0 * std_err_final_x)
 
 
 class TestBirthDeathExample(unittest.TestCase):
