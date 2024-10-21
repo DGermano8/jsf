@@ -72,6 +72,12 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
     """
     Test that we can read in an SBML example and that the results
     agree with an alternative simulator.
+
+    To run only this class use the following command:
+
+    ```
+    python3 tests/test.py TestBirthDeathSBMLExample
+    ```
     """
     def setUp(self):
         self.message = "Hello World!"
