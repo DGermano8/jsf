@@ -1,0 +1,53 @@
+<sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4">
+  <model id="sis_model">
+    <listOfCompartments>
+      <compartment id="main" />
+    </listOfCompartments>
+    <listOfSpecies>
+      <species id="S" compartment="main" initialAmount="997" />
+      <species id="I" compartment="main" initialAmount="3" />
+    </listOfSpecies>
+    <listOfReactions>
+      <reaction id="infection">
+	<listOfReactants>
+	  <speciesReference species="S" stoichiometry="1" />
+	  <speciesReference species="I" stoichiometry="1" />
+	</listOfReactants>
+	<listOfProducts>
+	  <speciesReference species="I" stoichiometry="2" />
+	</listOfProducts>
+	<kineticLaw>
+	  <math xmlns="http://www.w3.org/1998/Math/MathML">
+	    <apply><times/>
+	      <ci> beta </ci>
+	      <ci> S </ci>
+	      <ci> I </ci>
+	    </apply>
+	  </math>
+	  <listOfParameters>
+	    <parameter id="beta" value="0.002" />
+	  </listOfParameters>
+	</kineticLaw>
+      </reaction>
+      <reaction id="recovery">
+	<listOfReactants>
+	  <speciesReference species="I" stoichiometry="1" />
+	</listOfReactants>
+	<listOfProducts>
+	  <speciesReference species="S" stoichiometry="1" />
+	</listOfProducts>
+	<kineticLaw>
+	  <math xmlns="http://www.w3.org/1998/Math/MathML">
+	    <apply><times/>
+	      <ci> gamma </ci>
+	      <ci> I </ci>
+	    </apply>
+	  </math>
+	  <listOfParameters>
+	    <parameter id="gamma" value="1.0" />
+	  </listOfParameters>
+	</kineticLaw>
+      </reaction>
+    </listOfReactions>
+  </model>
+</sbml>

@@ -5,7 +5,6 @@
     </listOfCompartments>
     <listOfSpecies>
       <species id="X" compartment="main" initialAmount="5" />
-      <!-- <species id="X" compartment="main" initialConcentration="5" /> -->
     </listOfSpecies>
     <listOfReactions>
       <reaction id="birth">
