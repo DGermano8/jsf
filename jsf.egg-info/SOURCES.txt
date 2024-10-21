@@ -2,6 +2,7 @@ LICENCE
 setup.py
 jsf/__init__.py
 jsf/exact.py
+jsf/sbml.py
 jsf/types.py
 jsf.egg-info/PKG-INFO
 jsf.egg-info/SOURCES.txt

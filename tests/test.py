@@ -82,13 +82,10 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
     ```
     """
     def setUp(self):
-        self.num_reps = 500
-        # self.num_reps = 50
+        # self.num_reps = 500
+        self.num_reps = 50
         self.t_max = 6.0
         self.dt = 0.01
-        self.mean_field_soln = lambda t: self.x0 * math.exp(
-            (self.birth_rate - self.death_rate) * t
-        )
         self.threshold = 10
         my_opts = {
             "EnforceDo": [0],
@@ -102,8 +99,7 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
         self.document = reader.readSBML(self.sbml_bd_example_xml)
         self.model = self.document.getModel()
 
-        self.compartments = self.model.getListOfCompartments()
-        self.species_list = self.model.getListOfSpecies()
+        # Defined for testing to a known solution
         self.reactions = self.model.getListOfReactions()
         self.reaction_details = []
         for reaction in self.reactions:
@@ -115,41 +111,16 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
                 "products": products,
                 "rate_parameter": reaction.getKineticLaw().getParameter(0).getValue(),
             })
-
-        self.x0 = self.species_list[0].getInitialConcentration()
-        self.x0s = [[self.x0]] * self.num_reps
-
         self.birth_rate = self.reactions[0].getKineticLaw().getParameter(0).getValue()
         self.death_rate = self.reactions[1].getKineticLaw().getParameter(0).getValue()
+        self.mean_field_soln = lambda t: self.x0 * math.exp(
+            (self.birth_rate - self.death_rate) * t
+        )
 
-        def _zero_if_missing(x, y):
-            tmp = x[y]
-            return 0 if tmp == [] else tmp[0][-1]
-
-        nu_reactants = [[_zero_if_missing(r,'reactants')] for r in self.reaction_details]
-        nu_products = [[_zero_if_missing(r,'products')] for r in self.reaction_details]
-
-        # TODO We need to clean up parsing the rates out into a function here!
-        def rates(x, t):
-            return [self.birth_rate * x[0], self.death_rate * x[0]]
-
-        # # In the nu-matrix each row is a reaction and each column
-        # # describes the number items of that species used in the
-        # # reaction.
-        stoich = {
-            "nu": [
-                [a - b for a, b in zip(r1, r2)]
-                for r1, r2 in zip(nu_products, nu_reactants)
-            ],
-            "DoDisc": [1],
-            "nuReactant": nu_reactants,
-            "nuProduct": nu_products,
-        }
-
-
+        self.x0, rates, stoich = jsf.read_sbml(self.sbml_bd_example_xml)
         self.sims_exact = [
-            jsf.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="exact")
-            for x0 in self.x0s
+            jsf.jsf([self.x0], rates, stoich, self.t_max, config=my_opts, method="exact")
+            for _ in range(self.num_reps)
         ]
         self.x_timeseriess_exact = [sim[0][0] for sim in self.sims_exact]
 

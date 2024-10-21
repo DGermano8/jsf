@@ -3,6 +3,15 @@ import math
 from typing import Any, Callable, Dict, List, NewType, Tuple, Union
 from jsf.types import Time, SystemState, CompartmentValue, Trajectory
 from jsf import exact
+from jsf import sbml
+
+
+def read_sbml(sbml_xml):
+    """
+    Read an SBML file and return the initial state, rates, and
+    stoichiometric matrix.
+    """
+    return sbml.read_sbml(sbml_xml)
 
 
 def jsf(x0: SystemState, rates, stoich, t_max, **kwargs) -> Trajectory:
