@@ -224,7 +224,6 @@ class TestBirthDeathExample(unittest.TestCase):
         self.assertTrue(len(self.sims_exact) == self.num_reps)
 
     def test_op_split_mean_field_soln(self):
-        # import pdb; pdb.set_trace()
         self.assertTrue(all([foo[0] == self.x0 for foo in self.x_timeseriess]))
         final_x = [xs[-1] for xs in self.x_timeseriess]
         mean_final_x = sum(final_x) / len(final_x)
@@ -313,6 +312,68 @@ class TestSISExample(unittest.TestCase):
 
     def test_infected_timeseries_exact(self):
 
+        small_i_values = [i for i in self.infected_timeseries_exact if i <= self.threshold]
+        for i in small_i_values:
+            self.assertTrue(abs(i - round(i)) < 1e-6)
+
+
+class TestSISSBMLExample(unittest.TestCase):
+
+    def setUp(self):
+        random.seed(1234)
+        self.threshold = 40
+        my_opts = {
+            "EnforceDo": [0, 0],
+            "dt": 0.1,
+            "SwitchingThreshold": [self.threshold, self.threshold],
+        }
+
+        self.sbml_xml = os.path.join(os.path.dirname(__file__), "data", "sis-model.xml")
+        self.x0, rates, self.stoich = jsf.read_sbml(self.sbml_xml)
+
+        self.intended_x0 = [1000 - 3, 3]
+        _nu_reactants = [[1.0, 1.0], [0.0, 1.0]]
+        _nu_products = [[0.0, 2.0], [1.0, 0.0]]
+        self.intended_stoich = {
+            "nu": [
+                [a - b for a, b in zip(r1, r2)]
+                for r1, r2 in zip(_nu_products, _nu_reactants)
+            ],
+            "DoDisc": [1, 1],
+            "nuReactant": _nu_reactants,
+            "nuProduct": _nu_products,
+        }
+        def _tmp_rates(x, time):
+            s = x[0]
+            i = x[1]
+            return [2e-3 * s * i, 1.0 * i]
+        self.intended_rates = _tmp_rates
+
+        self.sim_exact = jsf.jsf(self.x0, rates, self.stoich, 10.0, config=my_opts, method="exact")
+        self.susceptible_timeseries_exact = self.sim_exact[0][0]
+        self.infected_timeseries_exact = self.sim_exact[0][1]
+
+        # Using the exact sampler
+        self.prev_sim_exact = jsf.jsf(self.intended_x0, self.intended_rates, self.intended_stoich, 10.0, config=my_opts, method="exact")
+        self.prev_susceptible_timeseries_exact = self.sim_exact[0][0]
+        self.prev_infected_timeseries_exact = self.sim_exact[0][1]
+
+    def test_equal_timeseries(self):
+        # Check that the timeseries are the same when the same
+        # parameters are used.
+        self.assertTrue(self.susceptible_timeseries_exact == self.prev_susceptible_timeseries_exact)
+        self.assertTrue(self.infected_timeseries_exact == self.prev_infected_timeseries_exact)
+
+    def test_x0(self):
+        self.assertTrue(self.x0 == self.intended_x0)
+
+    def test_stoich(self):
+        self.assertTrue(self.stoich["nu"] == self.intended_stoich["nu"])
+        self.assertTrue(self.stoich["DoDisc"] == self.intended_stoich["DoDisc"])
+        self.assertTrue(self.stoich["nuReactant"] == self.intended_stoich["nuReactant"])
+        self.assertTrue(self.stoich["nuProduct"] == self.intended_stoich["nuProduct"])
+
+    def test_infected_timeseries_exact(self):
         small_i_values = [i for i in self.infected_timeseries_exact if i <= self.threshold]
         for i in small_i_values:
             self.assertTrue(abs(i - round(i)) < 1e-6)
