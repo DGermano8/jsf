@@ -201,6 +201,77 @@ but the output of `jsf` is a pandas DataFrame of numbers so it's easy to use whi
    :alt: PredatorPrey example
 
 
+SBML
+----
+
+If you have an SBML file, using mass-action kinetics, and you want to
+simulate from it with JSF, there is support for reading these models
+into a form that JSF can use. The following example demonstrates how
+to do this.
+
+.. code-block:: python
+
+   x0, rates, stoich = jsf.read_sbml("<path/to/mysbml.xml>")
+   jsf.jsf(x0, rates, stoich, t_max, config=my_opts, method="exact")
+
+An example of such an SBML file to simulate from the SIS model is
+shown below:
+
+.. code-block:: xml
+
+   <sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4">
+     <model id="sis_model">
+       <listOfCompartments>
+         <compartment id="main" />
+       </listOfCompartments>
+       <listOfSpecies>
+         <species id="S" compartment="main" initialAmount="997" />
+         <species id="I" compartment="main" initialAmount="3" />
+       </listOfSpecies>
+       <listOfReactions>
+         <reaction id="infection">
+	   <listOfReactants>
+	     <speciesReference species="S" stoichiometry="1" />
+	     <speciesReference species="I" stoichiometry="1" />
+	   </listOfReactants>
+	   <listOfProducts>
+	     <speciesReference species="I" stoichiometry="2" />
+	   </listOfProducts>
+	   <kineticLaw>
+	     <math xmlns="http://www.w3.org/1998/Math/MathML">
+	       <apply><times/>
+	         <ci> beta </ci>
+	         <ci> S </ci>
+	         <ci> I </ci>
+	       </apply>
+	     </math>
+	     <listOfParameters>
+	       <parameter id="beta" value="0.002" />
+	     </listOfParameters>
+	   </kineticLaw>
+         </reaction>
+         <reaction id="recovery">
+	   <listOfReactants>
+	     <speciesReference species="I" stoichiometry="1" />
+	   </listOfReactants>
+	   <listOfProducts>
+	     <speciesReference species="S" stoichiometry="1" />
+	   </listOfProducts>
+	   <kineticLaw>
+	     <math xmlns="http://www.w3.org/1998/Math/MathML">
+	       <apply><times/>
+	         <ci> gamma </ci>
+	         <ci> I </ci>
+	       </apply>
+	     </math>
+	     <listOfParameters>
+	       <parameter id="gamma" value="1.0" />
+	     </listOfParameters>
+	   </kineticLaw>
+         </reaction>
+       </listOfReactions>
+     </model>
+   </sbml>
 
 
 Installation
