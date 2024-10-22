@@ -81,6 +81,7 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
     python3 tests/test.py TestBirthDeathSBMLExample
     ```
     """
+
     def setUp(self):
         # self.num_reps = 500
         self.num_reps = 50
@@ -93,8 +94,9 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
             "SwitchingThreshold": [self.threshold],
         }
 
-
-        self.sbml_bd_example_xml = os.path.join(os.path.dirname(__file__), "data", "birth-death-model.xml")
+        self.sbml_bd_example_xml = os.path.join(
+            os.path.dirname(__file__), "data", "birth-death-model.xml"
+        )
         reader = libsbml.SBMLReader()
         self.document = reader.readSBML(self.sbml_bd_example_xml)
         self.model = self.document.getModel()
@@ -103,14 +105,24 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
         self.reactions = self.model.getListOfReactions()
         self.reaction_details = []
         for reaction in self.reactions:
-            reactants = [(reactant.getSpecies(), reactant.getStoichiometry()) for reactant in reaction.getListOfReactants()]
-            products = [(product.getSpecies(), product.getStoichiometry()) for product in reaction.getListOfProducts()]
-            self.reaction_details.append({
-                "reaction_id": reaction.getId(),
-                "reactants": reactants,
-                "products": products,
-                "rate_parameter": reaction.getKineticLaw().getParameter(0).getValue(),
-            })
+            reactants = [
+                (reactant.getSpecies(), reactant.getStoichiometry())
+                for reactant in reaction.getListOfReactants()
+            ]
+            products = [
+                (product.getSpecies(), product.getStoichiometry())
+                for product in reaction.getListOfProducts()
+            ]
+            self.reaction_details.append(
+                {
+                    "reaction_id": reaction.getId(),
+                    "reactants": reactants,
+                    "products": products,
+                    "rate_parameter": reaction.getKineticLaw()
+                    .getParameter(0)
+                    .getValue(),
+                }
+            )
         self.birth_rate = self.reactions[0].getKineticLaw().getParameter(0).getValue()
         self.death_rate = self.reactions[1].getKineticLaw().getParameter(0).getValue()
         self.mean_field_soln = lambda t: self.x0 * math.exp(
@@ -119,7 +131,9 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
 
         self.x0, rates, stoich = jsf.read_sbml(self.sbml_bd_example_xml)
         self.sims_exact = [
-            jsf.jsf([self.x0], rates, stoich, self.t_max, config=my_opts, method="exact")
+            jsf.jsf(
+                [self.x0], rates, stoich, self.t_max, config=my_opts, method="exact"
+            )
             for _ in range(self.num_reps)
         ]
         self.x_timeseriess_exact = [sim[0][0] for sim in self.sims_exact]
@@ -343,26 +357,41 @@ class TestSISSBMLExample(unittest.TestCase):
             "nuReactant": _nu_reactants,
             "nuProduct": _nu_products,
         }
+
         def _tmp_rates(x, time):
             s = x[0]
             i = x[1]
             return [2e-3 * s * i, 1.0 * i]
+
         self.intended_rates = _tmp_rates
 
-        self.sim_exact = jsf.jsf(self.x0, rates, self.stoich, 10.0, config=my_opts, method="exact")
+        self.sim_exact = jsf.jsf(
+            self.x0, rates, self.stoich, 10.0, config=my_opts, method="exact"
+        )
         self.susceptible_timeseries_exact = self.sim_exact[0][0]
         self.infected_timeseries_exact = self.sim_exact[0][1]
 
         # Using the exact sampler
-        self.prev_sim_exact = jsf.jsf(self.intended_x0, self.intended_rates, self.intended_stoich, 10.0, config=my_opts, method="exact")
+        self.prev_sim_exact = jsf.jsf(
+            self.intended_x0,
+            self.intended_rates,
+            self.intended_stoich,
+            10.0,
+            config=my_opts,
+            method="exact",
+        )
         self.prev_susceptible_timeseries_exact = self.sim_exact[0][0]
         self.prev_infected_timeseries_exact = self.sim_exact[0][1]
 
     def test_equal_timeseries(self):
         # Check that the timeseries are the same when the same
         # parameters are used.
-        self.assertTrue(self.susceptible_timeseries_exact == self.prev_susceptible_timeseries_exact)
-        self.assertTrue(self.infected_timeseries_exact == self.prev_infected_timeseries_exact)
+        self.assertTrue(
+            self.susceptible_timeseries_exact == self.prev_susceptible_timeseries_exact
+        )
+        self.assertTrue(
+            self.infected_timeseries_exact == self.prev_infected_timeseries_exact
+        )
 
     def test_x0(self):
         self.assertTrue(self.x0 == self.intended_x0)
@@ -374,7 +403,9 @@ class TestSISSBMLExample(unittest.TestCase):
         self.assertTrue(self.stoich["nuProduct"] == self.intended_stoich["nuProduct"])
 
     def test_infected_timeseries_exact(self):
-        small_i_values = [i for i in self.infected_timeseries_exact if i <= self.threshold]
+        small_i_values = [
+            i for i in self.infected_timeseries_exact if i <= self.threshold
+        ]
         for i in small_i_values:
             self.assertTrue(abs(i - round(i)) < 1e-6)
 
