@@ -274,12 +274,30 @@ Housekeeping
 Testing
 ^^^^^^^
 
-There are some unit tests in the ``tests`` directory. You can run them
-with the following command.
+There are some unit tests in the ``tests`` directory. This should
+always run in under 5 minutes. You can run them with the following
+command.
 
 .. code-block:: sh
 
    python3 -m unittest discover -s tests
+
+If you only want to run the tests associated with a single class (or
+even a particular test in that class), you can use the following
+commands:
+
+.. code-block:: sh
+
+   python3 tests/test.py TestBirthDeathExample
+   python3 tests/test.py TestBirthDeathExample.test_output_shape
+
+If you are modifying code, you might need to reinstall the package
+before running the tests, here is a one liner to do that.
+
+.. code-block:: sh
+
+   pip install . && python3 tests/test.py TestBirthDeathSBMLExample
+
 
 Code formating and checking
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
