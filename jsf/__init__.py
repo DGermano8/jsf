@@ -13,6 +13,11 @@ def read_sbml(sbml_xml: str):
 
     Args:
         sbml_xml: The SBML file to read.
+
+    Returns:
+        x0: Initial state.
+        rates: Function that computes reaction rates.
+        stoich: Stoichiometry matrix.
     """
     return sbml.read_sbml(sbml_xml)
 
