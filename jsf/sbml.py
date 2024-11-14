@@ -4,7 +4,9 @@ from typing import Any, Callable, Dict, List, Tuple
 from jsf.types import Time, SystemState, CompartmentValue, Trajectory
 
 
-def read_sbml(sbml_xml: str) -> Tuple[SystemState, Callable[[SystemState, Time], List[float]], Dict[str, Any]]:
+def read_sbml(
+    sbml_xml: str,
+) -> Tuple[SystemState, Callable[[SystemState, Time], List[float]], Dict[str, Any]]:
     reader = libsbml.SBMLReader()
     doc = reader.readSBML(sbml_xml)
     model = doc.getModel()
