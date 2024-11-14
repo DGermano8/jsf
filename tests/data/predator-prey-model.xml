@@ -1,0 +1,76 @@
+<sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4">
+  <model id="predator_prey_model">
+
+    <listOfCompartments>
+      <compartment id="main" />
+    </listOfCompartments>
+
+    <listOfSpecies>
+      <species id="prey" compartment="main" initialAmount="50" />
+      <species id="predator" compartment="main" initialAmount="10" />
+    </listOfSpecies>
+
+    <listOfReactions>
+      <reaction id="prey_birth">
+	<listOfReactants>
+	  <speciesReference species="prey" stoichiometry="1" />
+	</listOfReactants>
+	<listOfProducts>
+	  <speciesReference species="prey" stoichiometry="2" />
+	</listOfProducts>
+	<kineticLaw>
+	  <math xmlns="http://www.w3.org/1998/Math/MathML">
+	    <apply><times/>
+	      <ci> alpha </ci>
+	      <ci> prey </ci>
+	    </apply>
+	  </math>
+	  <listOfParameters>
+	    <parameter id="alpha" value="2.00" />
+	  </listOfParameters>
+	</kineticLaw>
+      </reaction>
+
+      <reaction id="predator_death">
+	<listOfReactants>
+	  <speciesReference species="predator" stoichiometry="1" />
+	</listOfReactants>
+	<listOfProducts/>
+	<kineticLaw>
+	  <math xmlns="http://www.w3.org/1998/Math/MathML">
+	    <apply><times/>
+	      <ci> gamma </ci>
+	      <ci> predator </ci>
+	    </apply>
+	  </math>
+	  <listOfParameters>
+	    <parameter id="gamma" value="1.50" />
+	  </listOfParameters>
+	</kineticLaw>
+      </reaction>
+
+      <reaction id="predation">
+	<listOfReactants>
+	  <speciesReference species="prey" stoichiometry="1" />
+	  <speciesReference species="predator" stoichiometry="1" />
+	</listOfReactants>
+	<listOfProducts>
+	  <speciesReference species="predator" stoichiometry="2" />
+	</listOfProducts>
+	<kineticLaw>
+	  <math xmlns="http://www.w3.org/1998/Math/MathML">
+	    <apply><times/>
+	      <ci> beta </ci>
+	      <ci> prey </ci>
+	      <ci> predator </ci>
+	    </apply>
+	  </math>
+	  <listOfParameters>
+	    <parameter id="beta" value="0.05" />
+	  </listOfParameters>
+	</kineticLaw>
+      </reaction>
+    </listOfReactions>
+
+  </model>
+</sbml>

@@ -1,0 +1,48 @@
+<sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4">
+  <model id="birth_death_model">
+    <listOfCompartments>
+      <compartment id="main" />
+    </listOfCompartments>
+    <listOfSpecies>
+      <species id="X" compartment="main" initialAmount="5" />
+    </listOfSpecies>
+    <listOfReactions>
+      <reaction id="birth">
+        <listOfReactants>
+          <speciesReference species="X" stoichiometry="1" />
+        </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="X" stoichiometry="2" />
+        </listOfProducts>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply><times/>
+              <ci> lambda </ci>
+              <ci> X </ci>
+            </apply>
+          </math>
+          <listOfParameters>
+            <parameter id="lambda" value="0.1" />
+          </listOfParameters>
+        </kineticLaw>
+      </reaction>
+      <reaction id="death">
+        <listOfReactants>
+          <speciesReference species="X" stoichiometry="1" />
+        </listOfReactants>
+        <listOfProducts/>
+        <kineticLaw>
+          <math xmlns="http://www.w3.org/1998/Math/MathML">
+            <apply><times/>
+              <ci> mu </ci>
+              <ci> X </ci>
+            </apply>
+          </math>
+          <listOfParameters>
+            <parameter id="mu" value="0.05" />
+          </listOfParameters>
+        </kineticLaw>
+      </reaction>
+    </listOfReactions>
+  </model>
+</sbml>

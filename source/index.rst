@@ -201,7 +201,86 @@ but the output of `jsf` is a pandas DataFrame of numbers so it's easy to use whi
    :alt: PredatorPrey example
 
 
+SBML
+----
 
+If you have an SBML file, using mass-action kinetics, and you want to
+simulate from it with JSF, there is support for reading these models
+into a form that JSF can use. The following example demonstrates how
+to do this.
+
+.. code-block:: python
+
+   x0, rates, stoich = jsf.read_sbml("<path/to/mysbml.xml>")
+   jsf.jsf(x0, rates, stoich, t_max, config=my_opts, method="exact")
+
+An example of such an SBML file to simulate from the SIS model is
+shown below:
+
+.. code-block:: xml
+
+   <sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4">
+     <model id="sis_model">
+       <listOfCompartments>
+         <compartment id="main" />
+       </listOfCompartments>
+       <listOfSpecies>
+         <species id="S" compartment="main" initialAmount="997" />
+         <species id="I" compartment="main" initialAmount="3" />
+       </listOfSpecies>
+       <listOfReactions>
+         <reaction id="infection">
+	   <listOfReactants>
+	     <speciesReference species="S" stoichiometry="1" />
+	     <speciesReference species="I" stoichiometry="1" />
+	   </listOfReactants>
+	   <listOfProducts>
+	     <speciesReference species="I" stoichiometry="2" />
+	   </listOfProducts>
+	   <kineticLaw>
+	     <math xmlns="http://www.w3.org/1998/Math/MathML">
+	       <apply><times/>
+	         <ci> beta </ci>
+	         <ci> S </ci>
+	         <ci> I </ci>
+	       </apply>
+	     </math>
+	     <listOfParameters>
+	       <parameter id="beta" value="0.002" />
+	     </listOfParameters>
+	   </kineticLaw>
+         </reaction>
+         <reaction id="recovery">
+	   <listOfReactants>
+	     <speciesReference species="I" stoichiometry="1" />
+	   </listOfReactants>
+	   <listOfProducts>
+	     <speciesReference species="S" stoichiometry="1" />
+	   </listOfProducts>
+	   <kineticLaw>
+	     <math xmlns="http://www.w3.org/1998/Math/MathML">
+	       <apply><times/>
+	         <ci> gamma </ci>
+	         <ci> I </ci>
+	       </apply>
+	     </math>
+	     <listOfParameters>
+	       <parameter id="gamma" value="1.0" />
+	     </listOfParameters>
+	   </kineticLaw>
+         </reaction>
+       </listOfReactions>
+     </model>
+   </sbml>
+
+Additional SBML examples
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are additional examples of using SBML to specify models in the source code:
+
+- `Birth-death process <https://github.com/DGermano8/jsf/blob/main/tests/data/birth-death-model.xml>`_
+- `Predator-prey model <https://github.com/DGermano8/jsf/blob/main/tests/data/predator-prey-model.xml>`_
+- `SIS model <https://github.com/DGermano8/jsf/blob/main/tests/data/sis-model.xml>`_
 
 Installation
 ------------
@@ -274,12 +353,30 @@ Housekeeping
 Testing
 ^^^^^^^
 
-There are some unit tests in the ``tests`` directory. You can run them
-with the following command.
+There are some unit tests in the ``tests`` directory. This should
+always run in under 5 minutes. You can run them with the following
+command.
 
 .. code-block:: sh
 
    python3 -m unittest discover -s tests
+
+If you only want to run the tests associated with a single class (or
+even a particular test in that class), you can use the following
+commands:
+
+.. code-block:: sh
+
+   python3 tests/test.py TestBirthDeathExample
+   python3 tests/test.py TestBirthDeathExample.test_output_shape
+
+If you are modifying code, you might need to reinstall the package
+before running the tests, here is a one liner to do that.
+
+.. code-block:: sh
+
+   pip install . && python3 tests/test.py TestBirthDeathSBMLExample
+
 
 Code formating and checking
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

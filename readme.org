@@ -1,3 +1,4 @@
+#+title: Jump-Switch-Flow
 
 ** Installation
 
@@ -15,25 +16,14 @@ This won't work until the package has been made public
 pip install git+https://github.com/DGermano8/jsf.git
 #+end_src
 
-
-** Testing
-
-#+begin_src sh
-  python3 -m unittest discover -s tests
-#+end_src
-
 ** Documentation
 
-The documentation is generated with Sphinx and can be found in the
-=source= directory. To build the documentation use the following:
+*READ THE DOCUMENTATION* The documentation is generated with Sphinx
+and can be found in the =source= directory. To build the documentation
+use the following:
 
 #+begin_src sh
   make html
 #+end_src
 
-** Housekeeping
-
-#+begin_src sh
-  black jsf
-  mypy jsf
-#+end_src
+To view it, point your browser to =../build/html/index.html=.

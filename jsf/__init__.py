@@ -3,6 +3,23 @@ import math
 from typing import Any, Callable, Dict, List, NewType, Tuple, Union
 from jsf.types import Time, SystemState, CompartmentValue, Trajectory
 from jsf import exact
+from jsf import sbml
+
+
+def read_sbml(sbml_xml: str):
+    """
+    Read an SBML file and return the initial state, rates, and
+    stoichiometric matrix.
+
+    Args:
+        sbml_xml: The SBML file to read.
+
+    Returns:
+        x0: Initial state.
+        rates: Function that computes reaction rates.
+        stoich: Stoichiometry matrix.
+    """
+    return sbml.read_sbml(sbml_xml)
 
 
 def jsf(x0: SystemState, rates, stoich, t_max, **kwargs) -> Trajectory:
@@ -190,7 +207,7 @@ def JumpSwitchFlowSimulator(
 
                     # Update the discrete compartments
                     Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc, frozenReaction,SwitchingThreshold)
-                    
+
                     # Randomly round the values in x1 if necessary to ensure they take
                     # sensible values and preserve the average behaviour.
                     for ix, x in enumerate(Xcurr):
@@ -315,7 +332,7 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
                 Xprev_pos = Xprev[i]
                 rounded_Xprev_pos = math.ceil(Xprev_pos+x_step[i])
                 dXdt_pos = dXdt[i]
-                
+
                 possible_Dtau.append(abs((rounded_Xprev_pos - Xprev_pos) / dXdt_pos))
 
         if len(possible_Dtau) > 1:
