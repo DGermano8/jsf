@@ -273,6 +273,14 @@ shown below:
      </model>
    </sbml>
 
+Additional SBML examples
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are additional examples of using SBML to specify models in the source code:
+
+- `Birth-death process <https://github.com/DGermano8/jsf/blob/main/tests/data/birth-death-model.xml>`_
+- `Predator-prey model <https://github.com/DGermano8/jsf/blob/main/tests/data/predator-prey-model.xml>`_
+- `SIS model <https://github.com/DGermano8/jsf/blob/main/tests/data/sis-model.xml>`_
 
 Installation
 ------------
