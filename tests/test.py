@@ -410,5 +410,64 @@ class TestSISSBMLExample(unittest.TestCase):
             self.assertTrue(abs(i - round(i)) < 1e-6)
 
 
+class TestPPSBMLExample(unittest.TestCase):
+
+    def setUp(self):
+        random.seed(1234)
+        self.threshold = 30
+        my_opts = {
+            "EnforceDo": [0, 0],
+            "dt": 0.01,
+            "SwitchingThreshold": [self.threshold, self.threshold],
+        }
+
+        self.sbml_xml = os.path.join(
+            os.path.dirname(__file__), "data", "predator-prey-model.xml"
+        )
+        self.x0, rates, self.stoich = jsf.read_sbml(self.sbml_xml)
+
+        self.intended_x0 = [50, 10]
+        _nu_reactants = [[1, 0], [0, 1], [1, 1]]
+
+        _nu_products = [[2, 0], [0, 0], [0, 2]]
+        self.intended_stoich = {
+            "nu": [
+                [a - b for a, b in zip(r1, r2)]
+                for r1, r2 in zip(_nu_products, _nu_reactants)
+            ],
+            "DoDisc": [1, 1],
+            "nuReactant": _nu_reactants,
+            "nuProduct": _nu_products,
+        }
+
+        _tmp_rates = lambda x, _: [mA * x[0], mC * x[1], mB * x[0] * x[1]]
+        self.intended_rates = _tmp_rates
+
+        self.sim = jsf.jsf(
+            self.x0,
+            rates,
+            self.stoich,
+            20.0,
+            config=my_opts,
+            method="operator-splitting",
+        )
+
+    def test_x0(self):
+        self.assertTrue(self.x0 == self.intended_x0)
+
+    def test_sim(self):
+        # Test that we are getting a max range of values that looks
+        # similar to the limit cycle in the documentation.
+        min_prey = min(self.sim[0][0])
+        max_prey = max(self.sim[0][0])
+        min_pred = min(self.sim[0][1])
+        max_pred = max(self.sim[0][1])
+
+        self.assertTrue(min_prey < 20)
+        self.assertTrue(max_prey > 100)
+        self.assertTrue(min_pred < 20)
+        self.assertTrue(max_pred > 100)
+
+
 if __name__ == "__main__":
     unittest.main()
