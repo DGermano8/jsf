@@ -1,12 +1,15 @@
 <sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4">
   <model id="sis_model">
+
     <listOfCompartments>
       <compartment id="main" />
     </listOfCompartments>
+
     <listOfSpecies>
       <species id="S" compartment="main" initialAmount="997" />
       <species id="I" compartment="main" initialAmount="3" />
     </listOfSpecies>
+
     <listOfReactions>
       <reaction id="infection">
 	<listOfReactants>
