@@ -230,7 +230,7 @@ as described under the flowing paradigm from which this compartment has come and
 remains in the domain :math:`\mathcal{V}_{\Omega}`.
 
 Jump Clock Updates
--------------
+------------------
 
 For a given jump reaction :math:`\mathcal{R}_k`, a clock is initialised at time :math:`t_0`; 
 and :math:`u_k\sim\text{Unif}(0,1)`, giving :math:`J_k = \log(u_k^{-1})`. Over the course of a time step 
