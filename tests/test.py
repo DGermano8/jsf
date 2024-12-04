@@ -4,6 +4,7 @@ import os
 import random
 import time
 import unittest
+from numba import jit
 
 import jsf
 
@@ -408,6 +409,61 @@ class TestSISSBMLExample(unittest.TestCase):
         ]
         for i in small_i_values:
             self.assertTrue(abs(i - round(i)) < 1e-6)
+
+
+class TestNumbaExample(unittest.TestCase):
+    """
+    Test that the Numba JIT compiler is working as expected.
+    """
+
+    def setUp(self):
+
+        def demo_fib_slow(n):
+            if n <= 0:
+                return 0
+            elif n == 1:
+                return 1
+            else:
+                return demo_fib_slow(n - 1) + demo_fib_slow(n - 2)
+
+        @jit
+        def demo_fib_fast(n):
+            if n <= 0:
+                return 0
+            elif n == 1:
+                return 1
+            else:
+                return demo_fib_fast(n - 1) + demo_fib_fast(n - 2)
+
+        self.demo_fib_slow = demo_fib_slow
+        self.demo_fib_fast = demo_fib_fast
+
+        slow_start_time = time.time()
+        self.demo_fib_slow(30)
+        slow_end_time = time.time()
+        self.slow_time = slow_end_time - slow_start_time
+
+        # Run the fast version once first to JIT compile it and record
+        # this so we can check it is similar to the slow time as
+        # expected.
+        fast_start_time_pre_jit = time.time()
+        self.demo_fib_fast(30)
+        fast_end_time_pre_jit = time.time()
+        self.fast_time_pre_jit = fast_end_time_pre_jit - fast_start_time_pre_jit
+
+        fast_start_time = time.time()
+        self.demo_fib_fast(30)
+        fast_end_time = time.time()
+        self.fast_time = fast_end_time - fast_start_time
+
+    def test_fast_faster_than_slow(self):
+        # Check that the fast version is faster than the slow version
+        # by an order of magnitude.
+        self.assertTrue((10.0 * self.fast_time) < self.slow_time)
+        # Sanity-check that the pre-jit version is comparable to the
+        # non-jit-compiled version of the function so we know that
+        # this is working as expected.
+        self.assertTrue((abs(self.slow_time - self.fast_time_pre_jit) / self.slow_time) < 1.0)
 
 
 class TestPPSBMLExample(unittest.TestCase):
