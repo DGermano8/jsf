@@ -1,8 +1,8 @@
 Metadata-Version: 2.1
 Name: jsf
-Version: 0.1
+Version: 0.2
 Summary: Implementation of the jump-switch-flow simulator
 Home-page: https://github.com/DGermano8/jsf
 Author: Domenic Germano
-Author-email: germanod@student.unimelb.edu.au
+Author-email: domenic@unimelb.edu.au
 License-File: LICENCE

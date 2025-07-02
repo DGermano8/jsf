@@ -5,6 +5,7 @@ from jsf.types import Time, SystemState, CompartmentValue, Trajectory
 from jsf import exact
 from jsf import sbml
 
+# from numba import jit
 
 def read_sbml(sbml_xml: str):
     """
@@ -49,7 +50,6 @@ def jsf(x0: SystemState, rates, stoich, t_max, **kwargs) -> Trajectory:
 
     return result
 
-
 def JumpSwitchFlowSimulator(
         x0: SystemState,
         rates: Callable[[SystemState, Time], List[float]],
@@ -81,6 +81,7 @@ def JumpSwitchFlowSimulator(
     nu = stoich["nu"] # type: List[List[float]]
     nRates = len(nu)
     nCompartments = len(nu[0])
+
     nuReactant = stoich["nuReactant"] # type: List[List[float]]
     dt = options["dt"] # type: Time
 
@@ -95,10 +96,13 @@ def JumpSwitchFlowSimulator(
     DoDisc = [(x <= threshold and x==round(x)) for x, threshold in zip(x0, SwitchingThreshold)]
 
     # identify which compartment is in which reaction:
-    NuComp = [[value != 0 for value in row] for row in nu]
-    ReactComp = [[value != 0 for value in row] for row in nuReactant]
-    compartInNu = [[value != 0 for value in row] for row in MatrixPlusAB(NuComp,ReactComp)]
-
+    if 'SwitchingType' not in options or options['SwitchingType'] is None or options['SwitchingType'] == 'default':
+        NuComp = [[value != 0 for value in row] for row in nu]
+        ReactComp = [[value != 0 for value in row] for row in nuReactant]
+        compartInNu = [[value != 0 for value in row] for row in MatrixPlusAB(NuComp,ReactComp)]
+    elif options['SwitchingType'] == 'generous':
+        compartInNu = [[value != 0 for value in row] for row in nu]
+    
     # NOTE the variable `frozenReaction` is used to track which of the
     # potential reactions are frozen (i.e. only jumping not flowing).
     # This variable used to be called `discCompartment`. In a few
@@ -127,6 +131,7 @@ def JumpSwitchFlowSimulator(
     # initialise solution arrays
     X = [[x0[i]] for i in range(nCompartments)]
     TauArr = [Time(0.0)]
+    EventType = [0]
     iters = 0
 
     # Track Absolute time
@@ -206,7 +211,7 @@ def JumpSwitchFlowSimulator(
                 if num_non_zero(tauArray) > 0:
 
                     # Update the discrete compartments
-                    Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc, frozenReaction,SwitchingThreshold)
+                    Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin, pos = ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates,integralStep,TimePassed, AbsT, X, iters, nu, dXdt, OriginalDoDisc, frozenReaction,SwitchingThreshold)
 
                     # Randomly round the values in x1 if necessary to ensure they take
                     # sensible values and preserve the average behaviour.
@@ -217,13 +222,18 @@ def JumpSwitchFlowSimulator(
                                 Xcurr[ix] = x_floor + 1
                             else:
                                 Xcurr[ix] = x_floor
+
+
                             stayWhile = False
 
                     iters = iters + 1
-                    for i in range(nCompartments):
-                        X[i].append(Xcurr[i])
+                    # for i in range(nCompartments):
+                    #     X[i].append(Xcurr[i])
+                    for x, xcurr in zip(X, Xcurr):
+                        x.append(xcurr)
 
                     TauArr.append(AbsT)
+                    EventType.append(pos)
 
                     Dtau = Dtau - DtauMin
 
@@ -239,6 +249,7 @@ def JumpSwitchFlowSimulator(
         ContT = Time(ContT + DtauContStep)
 
         TauArr.append(ContT)
+        EventType.append(-1)
         for i in range(len(X)):
             X[i].append(CompartmentValue(X[i][iters - 1] + (0 if DoDisc[i] else (DtauContStep - TimePassed) * dXdt[i])))
 
@@ -253,7 +264,7 @@ def JumpSwitchFlowSimulator(
                     randTimes[jj] = random.random()
             newlyDiscCompIndex = None
 
-    return Trajectory((X, TauArr))
+    return Trajectory((X, TauArr, EventType))
 
 def ComputeFiringTimes(firedReactions,integralOfFiringTimes,randTimes,Props,dt,nRates,integralStep):
     tauArray = [0.0] * nRates
@@ -278,6 +289,9 @@ def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates
     Xcurr = [X[i][iters] + nu[pos][i] + (0 if OriginalDoDisc[i] else DtauMin * dXdt[i]) for i in range(nCompartments)]
     Xprev = [X[i][iters] for i in range(nCompartments)]
 
+    # print("AbsT", AbsT, "DtauMin", DtauMin, "Xcurr", Xcurr, "Xprev", Xprev, "nu:", nu[pos],"pos", pos)
+
+
     integralOfFiringTimes = [integral - step*disc for integral, step, disc in zip(integralOfFiringTimes, integralStep, frozenReaction)]
     integralStep = ComputeIntegralOfFiringTimes(DtauMin, Props, rates, Xprev, Xcurr, AbsT)
     integralOfFiringTimes = [integral + step*disc for integral, step, disc in zip(integralOfFiringTimes, integralStep, frozenReaction)]
@@ -285,7 +299,7 @@ def ImplementFiredReaction(tauArray ,integralOfFiringTimes,randTimes,Props,rates
     integralOfFiringTimes[pos] = 0.0
     randTimes[pos] = random.random()
 
-    return Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin
+    return Xcurr, Xprev, integralOfFiringTimes, integralStep, randTimes, TimePassed, AbsT, DtauMin, pos
 
 def ComputeIntegralOfFiringTimes(Dtau, Props, rates, Xprev, Xcurr, AbsT):
     # Integrate the cumulative wait times using trapezoid method
@@ -324,22 +338,23 @@ def UpdateCompartmentRegime(dt, Xprev, Dtau, dXdt, Props, nu, SwitchingThreshold
     x_step = [( 0 if isDisc else Dtau*dxi ) for dxi, isDisc in zip(dXdt, NewDoDisc)]
     if any([( (x+dxi  <= thresh) and  (not isDisc)) for x, isDisc, thresh, dxi in zip(Xprev,NewDoDisc,SwitchingThreshold,x_step)]):
         # Identify which compartment has just switched
-        pos = 0
+        pos = None
         possible_Dtau = [dt]
         for i, (x, isDisc, thresh, dxi) in enumerate(zip(Xprev,NewDoDisc,SwitchingThreshold, x_step)):
             if ((not isDisc) and  (x+dxi  <= thresh)):
 
                 Xprev_pos = Xprev[i]
-                rounded_Xprev_pos = math.ceil(Xprev_pos+x_step[i])
+                rounded_Xprev_pos = max(math.ceil(Xprev_pos+x_step[i]), thresh)
                 dXdt_pos = dXdt[i]
 
                 possible_Dtau.append(abs((rounded_Xprev_pos - Xprev_pos) / dXdt_pos))
+
 
         if len(possible_Dtau) > 1:
             Dtau = min(possible_Dtau)
             pos = possible_Dtau.index(Dtau)
 
-            if pos > 0:
+            if pos is not None:
                     pos = pos - 1
                     # update the discrete compartment that has just switched
                     newlyDiscCompIndex = pos
