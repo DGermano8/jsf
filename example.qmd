@@ -1,0 +1,40 @@
+# Jump Switch Flow (JSF) Example
+
+## Overview
+
+This document demonstrates the usage of the JSF Python package for simulating stochastic systems using the Jump Switch Flow algorithm.
+
+## Loading the Library
+
+```python
+import jsf
+```
+
+## Exploring the Package
+
+```python
+print(dir(jsf))
+```
+
+## Example: Birth-Death Model
+
+We use the example model provided in the repository.
+
+```python
+model_path = "tests/data/birth-death-model.xml"
+
+# exploring exact module
+from jsf import exact
+
+print(dir(exact))
+```
+
+## Expected Output
+
+The simulation produces trajectories representing the stochastic evolution of the system, combining stochastic and deterministic dynamics.
+
+## Notes
+
+* JSF combines stochastic simulation with mean-field approximations.
+* It improves computational efficiency while maintaining accuracy at low population levels.
+* Further exploration of the API is required to identify the main simulation entry point.
