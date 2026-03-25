@@ -59,6 +59,12 @@ def JumpSwitchFlowSimulator(
     """
     Simulate a jump-switch-flow process using the operator splitting
     method.
+    Assumptions:
+    - The system can be split into discrete and continuous components.
+    - Compartments below the switching threshold behave discretely.
+    - Compartments above the threshold behave continuously.
+    - Reaction rates are well-defined for all states.
+    - The time step (dt) is sufficiently small for numerical stability.
 
     Args:
         x0: The initial state of the system.

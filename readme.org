@@ -1,29 +1,46 @@
-#+title: Jump-Switch-Flow
+TITLE: GSOC TEST SOLUTIONS 
 
-** Installation
+This repository contains my solutions for the GSoC test tasks (Easy, Medium, and Hard).  
+Each task demonstrates understanding of the jsf package, Python–R integration using reticulate, and stochastic simulation concepts.
 
-*** From local copy
+1. EASY TEST : example.qmd
 
-#+begin_src sh
-  pip install /path/to/package
-#+end_src
+For the easy task, I created a Quarto file that demonstrates the basic usage of the jsf package.
 
-*** From GitHub
+- Loads the jsf package in R using reticulate
+- Shows a simple example workflow
+- Follows the structure shown in the official documentation
 
-This won't work until the package has been made public
+This file can be rendered using Quarto to view the output as a report.
 
-#+begin_src sh
-pip install git+https://github.com/DGermano8/jsf.git
-#+end_src
+2. MEDIUM TEST: Python–R Integration using reticulate
 
-** Documentation
+For the medium task, I wrote an R script that integrates Python-based jsf functionality using the reticulate package.
 
-*READ THE DOCUMENTATION* The documentation is generated with Sphinx
-and can be found in the =source= directory. To build the documentation
-use the following:
+- Imports the Python jsf module into R
+- Defines initial conditions and reaction rates
+- Runs a simulation using the operator-splitting method
+- Demonstrates how Python simulations can be controlled from R
 
-#+begin_src sh
-  make html
-#+end_src
+This shows how reticulate can be used to bridge both ecosystems smoothly.
 
-To view it, point your browser to =../build/html/index.html=.
+3. HARD TEST : Birth–Death Process Simulation
+FILE NAME : simualtion.py
+
+For the hard task, I implemented a stochastic birth–death process in Python and visualized the results.
+
+- Simulates population dynamics over time
+- Uses random sampling (Poisson process) for births and deaths
+- Compares two scenarios:
+  - Birth rate > Death rate (growth)
+  - Death rate > Birth rate (decline)
+
+RESULTS
+
+[[file:birth_death_plot.png]]
+
+HOW TO RUN
+begin_src sh
+pip install numpy matplotlib
+python simulation.py
+  

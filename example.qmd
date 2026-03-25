@@ -1,0 +1,15 @@
+# JSF Example Usage
+
+## Load reticulate
+```{r}
+library(reticulate)
+jsf <- import("jsf")
+```
+
+## Example usage
+```{r}
+# jsf$simulate(...)
+```
+
+## Notes
+This file demonstrates basic usage of the jsf package using reticulate in R.
