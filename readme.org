@@ -1,29 +1,132 @@
-#+title: Jump-Switch-Flow
+#+title: JSF: Jump-Switch-Flow
+#+author: Domenic Germano
+#+date: 2024
 
-** Installation
+* Jump-Switch-Flow (JSF)
 
-*** From local copy
+JSF is a Python package for efficient simulation of stochastic biochemical reaction networks and population models. It implements the /Jump-Switch-Flow/ algorithm, which adaptively combines:
 
-#+begin_src sh
-  pip install /path/to/package
+- *Jumps*: Exact stochastic simulation (Gillespie-style) for low-copy-number species
+- *Switches*: Automatic transitions between stochastic and deterministic regimes
+- *Flow*: Deterministic ODE integration for high-copy-number species
+
+This hybrid approach provides significant computational speedups over pure stochastic simulation while maintaining accuracy, particularly for systems with species spanning multiple scales.
+
+* Citation
+
+If you use JSF in your research, please cite:
+
+#+begin_src bibtex
+@article{germano2024jsf,
+  title   = {Jump-Switch-Flow: Hybrid Stochastic-Deterministic Solutions of Compartmental Epidemiological Models},
+  author  = {Germano, Domenic P.J., Zarebski, Alexander E., and Hautphenne, Sophie, and Moss, Robert, and Flegg, Jennifer A., and Flegg, Mark B.},
+  journal = {arXiv preprint arXiv:2405.13239},
+  year    = {2024},
+  url     = {https://arxiv.org/abs/2405.13239}
+}
 #+end_src
 
-*** From GitHub
+The preprint is available at: https://arxiv.org/abs/2405.13239
 
-This won't work until the package has been made public
+* Installation
+
+** Dependencies
+
+JSF requires Python 3.8+ and the following packages:
+
+- =numpy=
+- =scipy=
+- =matplotlib= (optional, for plotting)
+
+** From local copy
+
+#+begin_src sh
+pip install /path/to/jsf
+#+end_src
+
+** From GitHub
 
 #+begin_src sh
 pip install git+https://github.com/DGermano8/jsf.git
 #+end_src
 
-** Documentation
+* Quick Start
 
-*READ THE DOCUMENTATION* The documentation is generated with Sphinx
-and can be found in the =source= directory. To build the documentation
-use the following:
+** Predator-Prey Model
 
-#+begin_src sh
-  make html
+Below is an example simulating a stochastic Lotka-Volterra predator-prey model using JSF.
+
+#+begin_src python
+import jsf
+
+x0 = [50, 10]  # [Prey, Predator]
+
+mA = 2.00   # prey birth rate
+mB = 0.05   # predation rate
+mC = 1.50   # predator death rate
+
+rates = lambda x, _: [mA * x[0],
+                       mC * x[1],
+                       mB * x[0] * x[1]]
+
+reactant_matrix = [[1, 0],
+                   [0, 1],
+                   [1, 1]]
+
+product_matrix = [[2, 0],
+                  [0, 0],
+                  [0, 2]]
+
+stoich = {
+    "nu": [
+        [a - b for a, b in zip(r1, r2)]
+        for r1, r2 in zip(product_matrix, reactant_matrix)
+    ],
+    "DoDisc": [1, 1],
+    "nuReactant": reactant_matrix,
+    "nuProduct": product_matrix,
+}
+
+t_max = 10
+my_opts = {"EnforceDo": [0, 0], "dt": 0.001, "SwitchingThreshold": [30, 30]}
+
+sim = jsf.jsf(x0, rates, stoich, t_max, config=my_opts, method="operator-splitting")
+
+# sim[0] contains trajectories, sim[1] contains time points
 #+end_src
 
-To view it, point your browser to =../build/html/index.html=.
+For more detailed examples, see the =examples/= directory and the documentation.
+
+* Documentation
+
+Full documentation is generated with Sphinx and lives in the =source/= directory.
+
+** Building the docs
+
+#+begin_src sh
+cd docs
+make html
+#+end_src
+
+Then open =docs/build/html/index.html= in your browser.
+
+* Project Structure
+
+#+begin_src
+jsf/
+├── jsf/               # Core package source
+├── examples/          # Example scripts and notebooks
+├── docs/
+│   └── source/        # Sphinx documentation source
+├── tests/             # Unit tests
+├── readme.org         # This file
+└── setup.py / pyproject.toml
+#+end_src
+
+* License
+
+Please see the =LICENSE= file for details.
+
+* Contributing
+
+Contributions, bug reports, and feature requests are welcome. Please open an issue or pull request on [[https://github.com/DGermano8/jsf][GitHub]]

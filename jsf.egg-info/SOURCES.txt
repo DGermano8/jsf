@@ -1,5 +1,6 @@
 LICENCE
 setup.py
+jsf/__initOriginal__.py
 jsf/__init__.py
 jsf/exact.py
 jsf/sbml.py
