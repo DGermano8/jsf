@@ -36,7 +36,10 @@ def jsf(x0: SystemState, rates, stoich, t_max, **kwargs) -> Trajectory:
         **kwargs: A dictionary containing the simulation options.
 
     Returns:
-        A list containing the time series of the state of the system.
+        A list containing the time series of the state of the system, 
+        the time points at which the state was recorded, and the type of
+        event that occurred at each time point (e.g. reaction firing or
+        continuous update).
 
     Raises:
         RuntimeError: If the requested method is not implemented.
