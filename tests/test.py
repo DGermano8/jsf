@@ -5,7 +5,7 @@ import random
 import time
 import unittest
 
-import jsf
+import jsf.__init__ as __init__
 
 random.seed(1234)
 
@@ -57,14 +57,14 @@ class AnEdgeCase(unittest.TestCase):
 
     def test_values_op(self):
         try:
-            self.sim = jsf.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="operator-splitting")
+            self.sim = __init__.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="operator-splitting")
             self.check_trajectory_is_valid(self.sim)
         except ZeroDivisionError:
             self.assertTrue(False)
 
     def test_values_exact(self):
         try:
-            self.sim = jsf.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="exact")
+            self.sim = __init__.jsf(self.x0, self.rates, self.stoich, self.t_max, config=self.opts, method="exact")
             self.check_trajectory_is_valid(self.sim)
         except ZeroDivisionError:
             self.assertTrue(False)
@@ -129,9 +129,9 @@ class TestBirthDeathSBMLExample(unittest.TestCase):
             (self.birth_rate - self.death_rate) * t
         )
 
-        self.x0, rates, stoich = jsf.read_sbml(self.sbml_bd_example_xml)
+        self.x0, rates, stoich = __init__.read_sbml(self.sbml_bd_example_xml)
         self.sims_exact = [
-            jsf.jsf(
+            __init__.jsf(
                 [self.x0], rates, stoich, self.t_max, config=my_opts, method="exact"
             )
             for _ in range(self.num_reps)
@@ -211,7 +211,7 @@ class TestBirthDeathExample(unittest.TestCase):
 
         op_split_start_time = time.time()
         self.sims = [
-            jsf.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="operator-splitting")
+            __init__.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="operator-splitting")
             for x0 in self.x0s
         ]
         op_split_end_time = time.time()
@@ -225,7 +225,7 @@ class TestBirthDeathExample(unittest.TestCase):
 
         exact_start_time = time.time()
         self.sims_exact = [
-            jsf.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="exact")
+            __init__.jsf(x0, rates, stoich, self.t_max, config=my_opts, method="exact")
             for x0 in self.x0s
         ]
         exact_end_time = time.time()
@@ -304,12 +304,12 @@ class TestSISExample(unittest.TestCase):
         }
 
         # Using the operator splitting sampler
-        self.sim_op = jsf.JumpSwitchFlowSimulator(x0, rates, stoich, 10.0, my_opts)
+        self.sim_op = __init__.JumpSwitchFlowSimulator(x0, rates, stoich, 10.0, my_opts)
         self.susceptible_timeseries_op = self.sim_op[0][0]
         self.infected_timeseries_op = self.sim_op[0][1]
 
         # Using the exact sampler
-        self.sim_exact = jsf.jsf(x0, rates, stoich, 10.0, config=my_opts, method="exact")
+        self.sim_exact = __init__.jsf(x0, rates, stoich, 10.0, config=my_opts, method="exact")
         self.susceptible_timeseries_exact = self.sim_exact[0][0]
         self.infected_timeseries_exact = self.sim_exact[0][1]
 
@@ -343,7 +343,7 @@ class TestSISSBMLExample(unittest.TestCase):
         }
 
         self.sbml_xml = os.path.join(os.path.dirname(__file__), "data", "sis-model.xml")
-        self.x0, rates, self.stoich = jsf.read_sbml(self.sbml_xml)
+        self.x0, rates, self.stoich = __init__.read_sbml(self.sbml_xml)
 
         self.intended_x0 = [1000 - 3, 3]
         _nu_reactants = [[1.0, 1.0], [0.0, 1.0]]
@@ -365,14 +365,14 @@ class TestSISSBMLExample(unittest.TestCase):
 
         self.intended_rates = _tmp_rates
 
-        self.sim_exact = jsf.jsf(
+        self.sim_exact = __init__.jsf(
             self.x0, rates, self.stoich, 10.0, config=my_opts, method="exact"
         )
         self.susceptible_timeseries_exact = self.sim_exact[0][0]
         self.infected_timeseries_exact = self.sim_exact[0][1]
 
         # Using the exact sampler
-        self.prev_sim_exact = jsf.jsf(
+        self.prev_sim_exact = __init__.jsf(
             self.intended_x0,
             self.intended_rates,
             self.intended_stoich,
@@ -424,7 +424,7 @@ class TestPPSBMLExample(unittest.TestCase):
         self.sbml_xml = os.path.join(
             os.path.dirname(__file__), "data", "predator-prey-model.xml"
         )
-        self.x0, rates, self.stoich = jsf.read_sbml(self.sbml_xml)
+        self.x0, rates, self.stoich = __init__.read_sbml(self.sbml_xml)
 
         self.intended_x0 = [50, 10]
         _nu_reactants = [[1, 0], [0, 1], [1, 1]]
@@ -443,7 +443,7 @@ class TestPPSBMLExample(unittest.TestCase):
         _tmp_rates = lambda x, _: [mA * x[0], mC * x[1], mB * x[0] * x[1]]
         self.intended_rates = _tmp_rates
 
-        self.sim = jsf.jsf(
+        self.sim = __init__.jsf(
             self.x0,
             rates,
             self.stoich,

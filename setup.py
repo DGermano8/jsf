@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='jsf',
-    version='0.2',
+    version='0.3',
     packages=find_packages(),
     description='Implementation of the jump-switch-flow simulator',
     author='Domenic Germano',
